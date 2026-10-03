@@ -497,20 +497,26 @@ details>summary:hover{color:var(--ink)}
         <label class="btn primary"><input type="file" id="shFile" accept="image/*" multiple hidden>Take or choose photos</label>
         <button class="btn" id="shRead" disabled>Read the notes</button>
       </div>
+      <div class="row small">
+        <label class="row">Read with <select id="shEngine" aria-label="Which AI reads the notes"><option value="claude">Claude</option><option value="gemini">Gemini Flash (faster)</option></select></label>
+        <label class="row"><input type="checkbox" id="shCareful"> Careful read <span class="muted">(slower)</span></label>
+      </div>
       <div class="shthumbs" id="shThumbs"></div>
       <div class="note" id="shStatus" style="white-space:pre-line">One photo per page, taken straight on in good light. Choose several photos for a piece that runs over more than one page.</div>
       <details class="shkey">
-        <summary class="small">Claude API key <span class="muted" id="shKeyState"></span></summary>
+        <summary class="small"><span id="shKeyName">Claude API key</span> <span class="muted" id="shKeyState"></span></summary>
         <div class="stack" style="gap:8px;margin-top:10px">
           <!-- A login-shaped form so Safari offers to save the key to iCloud Keychain and to autofill it on your other devices. -->
           <form class="row" id="shKeyForm" method="post" action="#" autocomplete="on">
-            <input type="text" name="username" autocomplete="username" value="Claude API key" readonly tabindex="-1" aria-hidden="true" class="vh">
+            <input type="text" name="username" id="shKeyUser" autocomplete="username" value="Claude API key" tabindex="-1" aria-hidden="true" class="vh">
             <input type="password" id="shKey" name="password" placeholder="sk-ant-…" autocomplete="current-password" spellcheck="false" style="flex:1 1 220px;min-width:0" aria-label="Claude API key">
             <button class="btn" type="submit" id="shKeySave">Save</button>
             <button class="btn" type="button" id="shKeyForget">Forget</button>
           </form>
-          <p class="small muted" style="margin:0">Reading a photo needs your own key from console.anthropic.com. It is kept in this browser and sent only to Anthropic, together with the photo. A page usually costs a few cents.</p>
-          <p class="small muted" style="margin:0">On an iPhone or Mac, Safari may offer to save the key to iCloud Keychain when you tap Save; on your other devices, tap the field and choose it from the suggestions. You can also add it yourself in the Passwords app under violin.daiyip.com.</p>
+          <label class="row small"><input type="checkbox" id="shKeyDrive"> Keep my keys in Google Drive</label>
+          <p class="small muted" style="margin:0">With this on, your keys go to a hidden app folder in your Google Drive that only this app can see, and any device where you connect Google Drive gets them. Anyone who gets into your Google account could read them too, so set a spending limit on each key.</p>
+          <p class="small muted" style="margin:0" id="shKeyHelp"></p>
+          <p class="small muted" style="margin:0">When you tap Save, Safari may offer to save the key to iCloud Keychain (Chrome to its own password manager); on your other devices, tap the field and choose it from the suggestions. If no offer appears, add it yourself in the Passwords app under violin.daiyip.com.</p>
         </div>
       </details>
     </div>
@@ -2042,7 +2048,7 @@ scReset(); renderScRuns();
 // with no CDN fallback, so no third-party script ever runs on the page that holds the API key; it loads only when a photo is read.
 const ABCJS_LOCAL = "abcjs/abcjs-basic-min.js", ABCJS_CDN = "https://cdn.jsdelivr.net/npm/abcjs@6.7.1/dist/abcjs-basic-min.js";
 const SDK_URL = new URL("anthropic/sdk.min.mjs", location.href).href;
-const SH_MODEL = "claude-opus-5-5";
+const SH_MODEL = "claude-opus-5-5", GEMINI_MODEL = "gemini-3.7-flash";
 const SH_EXAMPLE = `X:1
 T:Minuet in G
 C:attr. J. S. Bach
@@ -2108,68 +2114,173 @@ $("shFile").addEventListener("change", async e => {
   for (const f of files){ try { photos.push(await shrinkPhoto(f, 2400)); } catch (err) {} }
   SH.pieceId = null; store.set("shPiece", null); showPhotos(photos); renderLib();
   if (!photos.length) shStatus("Those files couldn't be opened as pictures. Try a JPEG or PNG.", true);
-  else shStatus(store.get("shKey", "") ? "Ready. Press \u201cRead the notes\u201d." : "Ready. Add your Claude API key below, then press \u201cRead the notes\u201d.");
+  else shStatus(store.get(reader().store, "") ? "Ready. Press \u201cRead the notes\u201d." : `Ready. Add your ${reader().name} API key below, then press \u201cRead the notes\u201d.`);
 });
 
-function keyState(){ $("shKeyState").textContent = store.get("shKey", "") ? "· saved on this device" : "· not set"; }
+// Two readers: Claude (Anthropic SDK) and Gemini (plain fetch to Google's API). Each has its own key, saved through the
+// same login-shaped form; the hidden username tells Keychain which key is which.
+const READERS = {
+  claude: { name: "Claude", store: "shKey", re: /^sk-ant-\S{20,}$/, hint: "sk-ant-…",
+    times: ["about a minute", "2 to 4 minutes"],
+    help: "Reading a photo needs your own key from console.anthropic.com. It is kept in this browser and sent only to Anthropic, together with the photo. A page usually costs a few cents." },
+  gemini: { name: "Gemini", store: "shGKey", re: /^AIza[\w-]{30,}$/, hint: "AIza…",
+    times: ["well under a minute", "about a minute"],
+    help: "Reading a photo needs your own key from aistudio.google.com/apikey. It is kept in this browser and sent only to Google, together with the photo. On the free tier Google may use what you send to improve its products; with billing turned on it doesn't." }
+};
+const reader = () => READERS[$("shEngine").value] || READERS.claude;
+function keyState(){
+  const r = reader();
+  $("shKeyName").textContent = r.name + " API key";
+  $("shKeyState").textContent = !store.get(r.store, "") ? "· not set" : store.get("gKeys", null) === true ? "· saved, kept in Google Drive" : "· saved on this device";
+  $("shKeyDrive").checked = store.get("gKeys", null) === true;
+  $("shKeyUser").value = r.name + " API key"; $("shKey").placeholder = r.hint; $("shKey").setAttribute("aria-label", r.name + " API key");
+  $("shKeyHelp").textContent = r.help;
+}
 function saveKey(){
-  const v = $("shKey").value.trim(); if (!v) return;
-  store.set("shKey", v); keyState();
-  // Clearing the field right away can stop Safari from offering to save it to Keychain, so wait a moment.
-  setTimeout(() => { $("shKey").value = ""; }, 2000);
+  const v = $("shKey").value.trim(), r = reader(); if (!v) return;
+  store.set(r.store, v); store.set("shKeysAt", Date.now()); keyState(); keysToDriveSoon();
+  // Chrome and Edge offer to save a credential stored through this API; Safari ignores it and goes by the form instead.
+  if (window.PasswordCredential && navigator.credentials) navigator.credentials.store(new PasswordCredential({ id: r.name + " API key", password: v, name: r.name + " API key" })).catch(() => {});
+  // Safari offers to save a password when a submitted login form goes away, as if the login had worked, so fold the
+  // panel shut; the field is cleared only later because an emptied field gives it nothing to save.
+  setTimeout(() => { document.querySelector(".shkey").open = false; }, 300);
+  setTimeout(() => { $("shKey").value = ""; }, 4000);
   if (SH.photos.length) shStatus("Key saved. Press \u201cRead the notes\u201d.");
 }
 $("shKeyForm").addEventListener("submit", e => { e.preventDefault(); saveKey(); });
 // A key autofilled from Keychain is saved without needing a tap on Save.
-$("shKey").addEventListener("change", () => { if (/^sk-ant-\S{20,}$/.test($("shKey").value.trim()) && $("shKey").value.trim() !== store.get("shKey", "")) saveKey(); });
-$("shKeyForget").addEventListener("click", () => { store.set("shKey", ""); $("shKey").value = ""; keyState(); });
+$("shKey").addEventListener("change", () => { const v = $("shKey").value.trim(), r = reader(); if (r.re.test(v) && v !== store.get(r.store, "")) saveKey(); });
+$("shKeyForget").addEventListener("click", () => { store.set(reader().store, ""); store.set("shKeysAt", Date.now()); $("shKey").value = ""; keyState(); keysToDriveSoon(); });
+// Keys in Drive: off until ticked. On a new device the choice is still open (null), and finding keys in Drive turns it on.
+$("shKeyDrive").addEventListener("change", e => {
+  store.set("gKeys", e.target.checked); store.set("gKeysDrop", !e.target.checked); keyState();
+  if (e.target.checked && (!G.token() || !hasAppData())) googleSignIn(); else syncDrive();
+});
+function keysToDriveSoon(){ if (store.get("gKeys", null) === true) driveSoon(); }
+$("shEngine").value = READERS[store.get("shEngine", "")] ? store.get("shEngine", "") : "claude";
+$("shEngine").addEventListener("change", () => { store.set("shEngine", $("shEngine").value); $("shKey").value = ""; keyState(); });
 keyState();
 
-function readError(err){
-  const s = err && err.status;
-  if (s === 401 || s === 403) return "That API key wasn't accepted. Check it under \u201cClaude API key\u201d.";
-  if (s === 400 && /credit/i.test(err.message || "")) return "Your Anthropic account is out of credit. Add some at console.anthropic.com.";
-  if (s === 429 || s === 529 || (s >= 500 && s < 600)) return "Claude is busy right now. Try again in a minute.";
-  if (err && err.message && !s) return err.message.includes("fetch") || err.message.includes("import") ?
-    "Couldn't reach Claude. Check your internet connection." : err.message;
-  return "Reading failed" + (s ? " (error " + s + ")" : "") + ". Try again.";
+function readError(err, r){
+  const s = err && err.status, m = (err && err.message) || "";
+  if (s === 401 || s === 403 || (s === 400 && /api key/i.test(m))) return `That API key wasn't accepted. Check it under \u201c${r.name} API key\u201d.`;
+  if (s === 400 && /credit/i.test(m)) return "Your Anthropic account is out of credit. Add some at console.anthropic.com.";
+  if (s === 429) return `${r.name} says you've hit your usage limit for now. Wait a minute and try again.`;
+  if (s === 529 || (s >= 500 && s < 600)) return `${r.name} is busy right now. Try again in a minute.`;
+  if (m && !s) return /fetch|import|load failed|network/i.test(m) ? `Couldn't reach ${r.name}. Check your internet connection.` : m;
+  return "Reading failed" + (s ? " (error " + s + ")" : "") + (m && s ? ": " + m : "") + ". Try again.";
+}
+const askText = () => SH.photos.length > 1 ? "Transcribe this piece. The pages are in order." : "Transcribe this piece.";
+// Each reader returns { text, cut, refused } and reports progress through p: p.phase(words), p.text(sofar), p.alive(),
+// and sets p.cancel so a stalled read can be stopped.
+async function readClaude(key, careful, p){
+  const { default: Anthropic } = await import(SDK_URL);
+  const client = new Anthropic({ apiKey: key, dangerouslyAllowBrowser: true });
+  const content = [];
+  SH.photos.forEach((ph, i) => {
+    if (SH.photos.length > 1) content.push({ type: "text", text: `Page ${i + 1}:` });
+    content.push({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: ph.b64 } });
+  });
+  content.push({ type: "text", text: askText() });
+  // Normal reads use medium effort (about a minute); "Careful read" uses high effort, which thinks longer.
+  const stream = client.beta.messages.stream({
+    model: SH_MODEL, max_tokens: 32000, system: SH_SYSTEM,
+    thinking: { type: "adaptive", display: "summarized" },   // summarized thinking streams, which keeps the progress line alive
+    output_config: { effort: careful ? "high" : "medium" },
+    betas: ["server-side-fallback-2026-07-01"], fallbacks: "default",
+    messages: [{ role: "user", content }]
+  });
+  p.cancel = () => stream.abort();
+  p.phase("Waiting for Claude");
+  stream.on("streamEvent", ev => {
+    p.alive();
+    if (ev.type === "content_block_start" && ev.content_block.type === "thinking") p.phase("Claude is studying the page");
+    if (ev.type === "content_block_start" && ev.content_block.type === "text") p.phase("Writing the notes");
+  });
+  stream.on("text", (_, snapshot) => p.text(snapshot));
+  const msg = await stream.finalMessage();
+  return { text: msg.content.filter(b => b.type === "text").map(b => b.text).join("\n"), cut: msg.stop_reason === "max_tokens", refused: msg.stop_reason === "refusal" };
+}
+async function readGemini(key, careful, p){
+  const parts = [];
+  SH.photos.forEach((ph, i) => {
+    if (SH.photos.length > 1) parts.push({ text: `Page ${i + 1}:` });
+    parts.push({ inlineData: { mimeType: "image/jpeg", data: ph.b64 } });
+  });
+  parts.push({ text: askText() });
+  const ctl = new AbortController(); p.cancel = () => ctl.abort();
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:streamGenerateContent?alt=sse`, {
+    method: "POST", signal: ctl.signal,
+    headers: { "content-type": "application/json", "x-goog-api-key": key },
+    body: JSON.stringify({
+      systemInstruction: { parts: [{ text: SH_SYSTEM }] },
+      contents: [{ role: "user", parts }],
+      // Medium is Flash's own default; a careful read thinks harder. Thought summaries keep the progress line alive.
+      generationConfig: { maxOutputTokens: 32000, thinkingConfig: { thinkingLevel: careful ? "high" : "medium", includeThoughts: true } }
+    })
+  });
+  if (!res.ok){
+    let m = ""; try { m = (await res.json()).error.message; } catch {}
+    throw Object.assign(new Error(m), { status: res.status });
+  }
+  p.phase("Waiting for Gemini");
+  const rd = res.body.getReader(), dec = new TextDecoder();
+  let buf = "", text = "", finish = "", blocked = false;
+  const take = ev => {
+    const data = ev.split("\n").filter(l => l.startsWith("data:")).map(l => l.slice(5).trim()).join("");
+    if (!data) return;
+    const j = JSON.parse(data), c = j.candidates && j.candidates[0];
+    if (j.error) throw Object.assign(new Error(j.error.message || ""), { status: j.error.code });
+    if (j.promptFeedback && j.promptFeedback.blockReason) blocked = true;
+    for (const part of (c && c.content && c.content.parts) || []){
+      if (part.thought) p.phase("Gemini is studying the page");
+      else if (part.text){ text += part.text; p.phase("Writing the notes"); p.text(text); }
+    }
+    if (c && c.finishReason) finish = c.finishReason;
+  };
+  for (;;){
+    const { done, value } = await rd.read();
+    if (done) break;
+    p.alive();
+    buf += dec.decode(value, { stream: true }).replace(/\r/g, "");
+    let i; while ((i = buf.indexOf("\n\n")) >= 0){ take(buf.slice(0, i)); buf = buf.slice(i + 2); }
+  }
+  if (buf.trim()) take(buf);
+  return { text, cut: finish === "MAX_TOKENS", refused: blocked || (!text && /SAFETY|PROHIBITED|RECITATION|BLOCK/.test(finish)) };
 }
 $("shRead").addEventListener("click", async () => {
-  const key = store.get("shKey", "");
-  if (!key){ document.querySelector(".shkey").open = true; $("shKey").focus(); shStatus("Add your Claude API key first. It stays on this device.", true); return; }
+  const r = reader(), key = store.get(r.store, "");
+  if (!key){ document.querySelector(".shkey").open = true; $("shKey").focus(); shStatus(`Add your ${r.name} API key first. It stays on this device.`, true); return; }
   if (!SH.photos.length) return;
   const btn = $("shRead"); btn.disabled = true; btn.textContent = "Reading…";
-  shStatus(`Claude is reading ${SH.photos.length === 1 ? "the page" : SH.photos.length + " pages"}. This usually takes under a minute.`);
+  const careful = $("shCareful").checked, pages = SH.photos.length === 1 ? "the page" : SH.photos.length + " pages";
+  // Live progress: elapsed time plus what the reader is doing, so a long read never looks frozen.
+  const t0 = Date.now(); let phase = "Sending the photo", bars = 0, lastEvent = Date.now(), stalled = false;
+  const p = { cancel: null, phase: w => { phase = w; }, text: s => { bars = (s.match(/\|/g) || []).length; }, alive: () => { lastEvent = Date.now(); } };
+  const tick = () => {
+    const s = Math.round((Date.now() - t0) / 1000), clock = s < 60 ? s + "s" : Math.floor(s / 60) + "m " + String(s % 60).padStart(2, "0") + "s";
+    shStatus(`${phase}${bars ? ` (${bars} bars so far)` : ""}… ${clock}\nKeep this screen open until it finishes; a ${careful ? "careful" : "normal"} read of ${pages} with ${r.name} usually takes ${r.times[careful ? 1 : 0]}.`);
+    if (p.cancel && Date.now() - lastEvent > 150000){ stalled = true; p.cancel(); }
+  };
+  const ticker = setInterval(tick, 1000); tick();
   try {
-    const { default: Anthropic } = await import(SDK_URL);
-    const client = new Anthropic({ apiKey: key, dangerouslyAllowBrowser: true });
-    const content = [];
-    SH.photos.forEach((p, i) => {
-      if (SH.photos.length > 1) content.push({ type: "text", text: `Page ${i + 1}:` });
-      content.push({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: p.b64 } });
-    });
-    content.push({ type: "text", text: SH.photos.length > 1 ? "Transcribe this piece. The pages are in order." : "Transcribe this piece." });
-    const msg = await client.beta.messages.stream({
-      model: SH_MODEL, max_tokens: 32000, system: SH_SYSTEM,
-      output_config: { effort: "high" },
-      betas: ["server-side-fallback-2026-07-01"], fallbacks: "default",
-      messages: [{ role: "user", content }]
-    }).finalMessage();
-    if (msg.stop_reason === "refusal") throw new Error("Claude couldn't read this image. Try another photo.");
-    const text = msg.content.filter(b => b.type === "text").map(b => b.text).join("\n").trim();
-    if (/NO MUSIC FOUND/.test(text)) throw new Error("Claude didn't find any music in the photo. Try a sharper, straighter shot.");
+    const out = await (r === READERS.gemini ? readGemini : readClaude)(key, careful, p);
+    if (out.refused) throw new Error(`${r.name} couldn't read this image. Try another photo.`);
+    const text = out.text.trim();
+    if (/NO MUSIC FOUND/.test(text)) throw new Error(`${r.name} didn't find any music in the photo. Try a sharper, straighter shot.`);
     const m = text.match(/```(?:abc)?[^\n]*\n([\s\S]*?)```/);
     const abc = (m ? m[1] : text).trim();
     if (!/^K:/m.test(abc)) throw new Error("The reply didn't contain readable notation. Try again, or with a clearer photo.");
     const unsure = m ? text.slice(text.indexOf(m[0]) + m[0].length).trim() : "";
     await setAbc(abc, true);
     await savePiece();   // a read costs money, so the result is kept straight away
-    shStatus((msg.stop_reason === "max_tokens" ? "The piece was too long to finish; the end may be missing. " : "Done. ") +
+    shStatus((out.cut ? "The piece was too long to finish; the end may be missing. " : "Done. ") +
       "Saved to your pieces. Compare the notation with your photo, fix anything misread under \u201cEdit the notes as text\u201d, then press Save piece." + (unsure ? "\n\n" + unsure : ""));
     $("shPaper").scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (err) {
-    shStatus(readError(err), true);
+    shStatus(stalled ? `${r.name} stopped answering, probably because the screen locked or the app went to the background. Press \u201cRead the notes\u201d to try again and keep the screen on.` : readError(err, r), true);
   } finally {
+    clearInterval(ticker);
     btn.disabled = !SH.photos.length; btn.textContent = "Read the notes";
   }
 });
@@ -2316,12 +2427,15 @@ const G = {
   api: "https://www.googleapis.com/drive/v3/", up: "https://www.googleapis.com/upload/drive/v3/",
   folderName: "Violin Practice Room", busy: false
 };
+// drive.file for the pieces folder; drive.appdata for the hidden app folder that can hold the API keys.
+const G_SCOPES = "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.appdata";
+const hasAppData = () => (store.get("gScope", "") || "").includes("drive.appdata");
 const redirectUri = () => location.origin + location.pathname.replace(/index\.html$/, "");
 function googleSignIn(){
   const state = newId(); store.set("gState", state);
   location.assign("https://accounts.google.com/o/oauth2/v2/auth?" + new URLSearchParams({
     client_id: G.clientId(), redirect_uri: redirectUri(), response_type: "token", state,
-    scope: "https://www.googleapis.com/auth/drive.file", include_granted_scopes: "true"
+    scope: G_SCOPES, include_granted_scopes: "true"
   }));
 }
 // Back from Google: the token arrives in the URL fragment.
@@ -2333,7 +2447,7 @@ function takeGoogleToken(){
   store.set("gState", "");
   if (ok && q.get("access_token")){
     store.set("gToken", { access: q.get("access_token"), exp: Date.now() + (+q.get("expires_in") || 3600) * 1000 });
-    store.set("gOn", true);
+    store.set("gOn", true); store.set("gScope", q.get("scope") || "");
   } else SH.syncMsg = q.get("error") === "access_denied" ? "Google sign-in was cancelled." : "Google sign-in didn't complete. Try again.";
   return true;
 }
@@ -2393,10 +2507,39 @@ async function pullPiece(remote, local){
   await LIB.put({ id: d.id, title: d.title, abc: d.abc, bpm: d.bpm, photos, updatedAt: d.updatedAt,
     drive: { json: remote.id, photos: d.photoIds || [], syncedAt: d.updatedAt } });
 }
+// API keys live in one keys.json in Drive's hidden app folder; the newer side wins, so Save and Forget carry across devices.
+const KEY_STORES = () => Object.values(READERS).map(r => r.store);
+async function driveKeysFile(){
+  const q = encodeURIComponent("name='keys.json' and trashed=false");
+  const r = await gFetch(G.api + "files?spaces=appDataFolder&fields=files(id,appProperties)&q=" + q).then(r => r.json());
+  return (r.files || [])[0] || null;
+}
+async function syncKeys(){
+  const want = store.get("gKeys", null);
+  if (!hasAppData()) return;
+  if (want === false){
+    // Turned off here: remove the copy in Drive once (other devices keep the keys they already have).
+    if (store.get("gKeysDrop", false)){ const f = await driveKeysFile(); if (f) await gFetch(G.api + "files/" + f.id, { method: "DELETE" }); store.set("gKeysDrop", false); }
+    return;
+  }
+  const f = await driveKeysFile(), at = store.get("shKeysAt", 0), rAt = f ? +((f.appProperties || {}).updatedAt || 0) : 0;
+  if (f && (rAt > at || want === null)){
+    const d = await gFetch(G.api + "files/" + f.id + "?alt=media").then(r => r.json());
+    KEY_STORES().forEach(k => { if (typeof d[k] === "string") store.set(k, d[k]); });
+    store.set("shKeysAt", rAt); store.set("gKeys", true); keyState();
+  } else if (want === true && (!f || at > rAt)){
+    const data = { updatedAt: at || Date.now() }; KEY_STORES().forEach(k => { data[k] = store.get(k, ""); });
+    const meta = { name: "keys.json", appProperties: { updatedAt: String(data.updatedAt) } };
+    if (!f) meta.parents = ["appDataFolder"];
+    await gUpload(meta, new Blob([JSON.stringify(data)], { type: "application/json" }), f && f.id);
+  }
+}
 async function syncDrive(){
   if (G.busy || !store.get("gOn", false) || !G.token()) return renderSync();
   G.busy = true; SH.syncMsg = ""; renderSync();
   try {
+    if (store.get("gKeys", null) === true && !hasAppData()) SH.keyMsg = "To keep your keys in Google Drive, disconnect and connect Google Drive again so it can use the hidden app folder.";
+    else { SH.keyMsg = ""; await syncKeys().catch(e => { if (e.signin) throw e; SH.keyMsg = "Couldn't sync your keys with Google Drive: " + e.message + "."; }); }
     const before = store.get("gFolder", ""), folder = await gFolder();
     // A new folder (the old one was deleted or never existed): treat every local piece as not yet uploaded, never as deleted remotely.
     if (folder !== before) for (const p of await LIB.all()) if (p.drive){ p.drive = null; await LIB.put(p); }
@@ -2441,9 +2584,9 @@ function driveSoon(){ clearTimeout(driveT); driveT = setTimeout(syncDrive, 800);
 function ago(t){ const s = (Date.now() - t) / 1000; return s < 60 ? "just now" : s < 3600 ? Math.round(s / 60) + " min ago" : s < 86400 ? Math.round(s / 3600) + " h ago" : new Date(t).toLocaleDateString(); }
 function renderSync(){
   const on = store.get("gOn", false), tok = G.token(), last = store.get("gLast", 0), hasId = !!G.clientId();
-  $("shSyncState").textContent = SH.syncMsg || (!on ? "Saved on this device only." : G.busy ? "Syncing with Google Drive…" :
-    !tok ? "Google Drive sign-in has expired. Tap Sync now to reconnect." : last ? `Synced with Google Drive ${ago(last)}.` : "Connected to Google Drive.");
-  $("shSyncState").classList.toggle("bad", !!SH.syncMsg);
+  $("shSyncState").textContent = (SH.keyMsg ? SH.keyMsg + " " : "") + (SH.syncMsg || (!on ? "Saved on this device only." : G.busy ? "Syncing with Google Drive…" :
+    !tok ? "Google Drive sign-in has expired. Tap Sync now to reconnect." : last ? `Synced with Google Drive ${ago(last)}.` : "Connected to Google Drive."));
+  $("shSyncState").classList.toggle("bad", !!(SH.syncMsg || SH.keyMsg));
   $("shSyncBtn").textContent = on ? "Sync now" : "Connect Google Drive";
   $("shSyncBtn").disabled = G.busy || !hasId;
   $("shSyncOff").hidden = !on;
@@ -2456,7 +2599,7 @@ $("shSyncBtn").addEventListener("click", () => {
 $("shSyncOff").addEventListener("click", async () => {
   const t = store.get("gToken", null);
   if (t) fetch("https://oauth2.googleapis.com/revoke?token=" + encodeURIComponent(t.access), { method: "POST", mode: "no-cors" }).catch(() => {});
-  ["gToken", "gFolder", "gLast"].forEach(k => store.set(k, null)); store.set("gOn", false); SH.syncMsg = "";
+  ["gToken", "gFolder", "gLast", "gScope"].forEach(k => store.set(k, null)); store.set("gOn", false); SH.syncMsg = ""; SH.keyMsg = "";
   // Pieces stay here; forget their Drive links so a later connection uploads them afresh.
   for (const p of await LIB.all()){ if (p.deleted) await LIB.del(p.id); else if (p.drive){ p.drive = null; await LIB.put(p); } }
   renderSync();
