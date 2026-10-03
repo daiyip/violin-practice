@@ -2018,9 +2018,10 @@ scReset(); renderScRuns();
 
 /* ---------- Sheet music ---------- */
 // Photo -> Claude (vision) -> ABC notation -> abcjs draws it, plays it with sampled instruments and adds metronome clicks.
-// abcjs is bundled in abcjs/ (CDN fallback when the page is opened from disk); the Anthropic SDK loads only when a photo is read.
+// abcjs is bundled in abcjs/ (CDN fallback when the page is opened from disk). The Anthropic SDK is bundled in anthropic/
+// with no CDN fallback, so no third-party script ever runs on the page that holds the API key; it loads only when a photo is read.
 const ABCJS_LOCAL = "abcjs/abcjs-basic-min.js", ABCJS_CDN = "https://cdn.jsdelivr.net/npm/abcjs@6.7.1/dist/abcjs-basic-min.js";
-const SDK_URL = "https://cdn.jsdelivr.net/npm/@anthropic-ai/sdk@0.131.0/+esm";
+const SDK_URL = new URL("anthropic/sdk.min.mjs", location.href).href;
 const SH_MODEL = "claude-opus-5-5";
 const SH_EXAMPLE = `X:1
 T:Minuet in G
