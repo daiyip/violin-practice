@@ -14,7 +14,7 @@ A personal practice companion for learning the violin, in a single web page. It 
 | **Drone** | A sustained tonic (with optional fifth) in any key, for intonation practice. |
 | **Fingerboard** | A first-position map with finger numbers, scale highlighting and high/low 2nd-finger patterns per key, plus a note-naming quiz. |
 | **Scales** | Major and minor scales and arpeggios in one or two octaves. It listens as you play, scores each note in cents, and says which finger to move. Recent runs are kept so you can see progress. |
-| **Sheet music** | Photograph a page of music and Claude transcribes it to ABC notation. The app draws the notes so you can check them against the photo and fix misreads, then plays them (violin or piano sound) at any tempo with a metronome count-in or click track, or clicks only. It can also hand the tempo and time signature to the metronome, save pieces, and export a MIDI file. |
+| **Sheet music** | Photograph a page of music and Claude or Gemini Flash (your choice) transcribes it to ABC notation. The app draws the notes so you can check them against the photo and fix misreads, then plays them (violin or piano sound) at any tempo with a metronome count-in or click track, or clicks only. It can also hand the tempo and time signature to the metronome, save pieces, and export a MIDI file. |
 | **Ear training** | Interval recognition (with a tune to remember each interval) and a sharp/flat/in-tune drill that narrows to the smallest pitch difference you can hear. |
 | **Listen back** | Open a recording: pitch trace and per-note intonation (cents sharp/flat), slow-down playback with A–B loop, and a rhythm check (tempo you played, rushing/dragging, evenness). |
 | **Posture** | Open a video of yourself playing (or use the camera): checks shoulder, head tilt, left wrist, bow path and bow elbow using on-device pose tracking. |
@@ -22,7 +22,7 @@ A personal practice companion for learning the violin, in a single web page. It 
 
 All audio analysis is plain signal processing (YIN pitch detection, onset detection). The posture tab uses Google's MediaPipe pose model, which runs entirely in the browser; no audio or video leaves your device.
 
-The sheet-music tab is the one exception: reading a photo sends it to the Claude API (model `claude-opus-5-5`) using your own API key, which is stored only in your browser. The Anthropic SDK is bundled in `anthropic/` rather than loaded from a CDN, so no third-party script runs on the page that holds the key. Drawing, playback and MIDI export run locally with [abcjs](https://www.abcjs.net/); the instrument samples download from the abcjs soundfont site the first time you press Play.
+The sheet-music tab is the one exception: reading a photo sends it either to the Claude API (model `claude-opus-5-5`) or to the Gemini API (model `gemini-3.7-flash`), using your own API key for that service, which is stored only in your browser. On Gemini's free tier, Google may use what you send to improve its products. The Anthropic SDK is bundled in `anthropic/` rather than loaded from a CDN, so no third-party script runs on the page that holds the key; Gemini is called with a plain `fetch`, with no SDK. Drawing, playback and MIDI export run locally with [abcjs](https://www.abcjs.net/); the instrument samples download from the abcjs soundfont site the first time you press Play.
 
 ## Running it
 
