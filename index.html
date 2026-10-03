@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Violin Practice Room</title>
+<link rel="icon" href="icons/logo.svg" type="image/svg+xml">
+<link rel="icon" href="icons/icon-32.png" sizes="32x32" type="image/png">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="apple-mobile-web-app-title" content="Violin">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
@@ -28,6 +32,8 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 .wrap{max-width:900px;margin:0 auto;padding-inline:16px;padding-block:20px 48px}
 header.top{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 20px;margin-bottom:16px}
 h1{font-family:var(--f-display);font-weight:400;font-size:clamp(26px,5vw,34px);margin:0;letter-spacing:-.01em}
+h1.brand{display:flex;align-items:center;gap:12px}
+h1.brand img{width:1.25em;height:1.25em;flex:none}
 .pitchref{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}
 .pitchref select{font-family:var(--f-mono)}
 nav.tabs{display:flex;flex-wrap:nowrap;justify-content:space-between;gap:0;border-bottom:1px solid var(--line);margin-bottom:20px}
@@ -336,7 +342,7 @@ details>summary:hover{color:var(--ink)}
 
 <div class="wrap">
   <header class="top">
-    <h1>Violin Practice Room</h1>
+    <h1 class="brand"><img src="icons/logo.svg" alt="" width="40" height="40">Violin Practice Room</h1>
     <label class="pitchref" for="aref">Concert pitch A =
       <select id="aref"><option>438</option><option>440</option><option>441</option><option>442</option><option>443</option></select> Hz
     </label>
