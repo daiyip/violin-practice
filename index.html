@@ -497,6 +497,7 @@ details>summary:hover{color:var(--ink)}
         <label class="btn primary"><input type="file" id="shFile" accept="image/*" multiple hidden>Take or choose photos</label>
         <button class="btn" id="shRead" disabled>Read the notes</button>
       </div>
+      <label class="row small"><input type="checkbox" id="shCareful"> Careful read <span class="muted">(slower, for dense or handwritten pages)</span></label>
       <div class="shthumbs" id="shThumbs"></div>
       <div class="note" id="shStatus" style="white-space:pre-line">One photo per page, taken straight on in good light. Choose several photos for a piece that runs over more than one page.</div>
       <details class="shkey">
@@ -2143,7 +2144,15 @@ $("shRead").addEventListener("click", async () => {
   if (!key){ document.querySelector(".shkey").open = true; $("shKey").focus(); shStatus("Add your Claude API key first. It stays on this device.", true); return; }
   if (!SH.photos.length) return;
   const btn = $("shRead"); btn.disabled = true; btn.textContent = "Reading…";
-  shStatus(`Claude is reading ${SH.photos.length === 1 ? "the page" : SH.photos.length + " pages"}. This usually takes under a minute.`);
+  const careful = $("shCareful").checked, pages = SH.photos.length === 1 ? "the page" : SH.photos.length + " pages";
+  // Live progress: elapsed time plus what Claude is doing, so a long read never looks frozen.
+  const t0 = Date.now(); let phase = "Sending the photo", bars = 0, lastEvent = Date.now(), stream = null, stalled = false;
+  const tick = () => {
+    const s = Math.round((Date.now() - t0) / 1000), clock = s < 60 ? s + "s" : Math.floor(s / 60) + "m " + String(s % 60).padStart(2, "0") + "s";
+    shStatus(`${phase}${bars ? ` (${bars} bars so far)` : ""}… ${clock}\nKeep this screen open until it finishes; a ${careful ? "careful" : "normal"} read of ${pages} usually takes ${careful ? "2 to 4 minutes" : "about a minute"}.`);
+    if (stream && Date.now() - lastEvent > 150000){ stalled = true; stream.abort(); }
+  };
+  const ticker = setInterval(tick, 1000); tick();
   try {
     const { default: Anthropic } = await import(SDK_URL);
     const client = new Anthropic({ apiKey: key, dangerouslyAllowBrowser: true });
@@ -2153,12 +2162,21 @@ $("shRead").addEventListener("click", async () => {
       content.push({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: p.b64 } });
     });
     content.push({ type: "text", text: SH.photos.length > 1 ? "Transcribe this piece. The pages are in order." : "Transcribe this piece." });
-    const msg = await client.beta.messages.stream({
+    // Normal reads use medium effort (about a minute); "Careful read" uses high effort, which thinks longer.
+    stream = client.beta.messages.stream({
       model: SH_MODEL, max_tokens: 32000, system: SH_SYSTEM,
-      output_config: { effort: "high" },
+      thinking: { type: "adaptive", display: "summarized" },   // summarized thinking streams, which keeps the progress line alive
+      output_config: { effort: careful ? "high" : "medium" },
       betas: ["server-side-fallback-2026-07-01"], fallbacks: "default",
       messages: [{ role: "user", content }]
-    }).finalMessage();
+    });
+    phase = "Waiting for Claude";
+    stream.on("streamEvent", ev => {
+      lastEvent = Date.now();
+      if (ev.type === "content_block_start") phase = ev.content_block.type === "thinking" ? "Claude is studying the page" : ev.content_block.type === "text" ? "Writing the notes" : phase;
+    });
+    stream.on("text", (_, snapshot) => { bars = (snapshot.match(/\|/g) || []).length; });
+    const msg = await stream.finalMessage();
     if (msg.stop_reason === "refusal") throw new Error("Claude couldn't read this image. Try another photo.");
     const text = msg.content.filter(b => b.type === "text").map(b => b.text).join("\n").trim();
     if (/NO MUSIC FOUND/.test(text)) throw new Error("Claude didn't find any music in the photo. Try a sharper, straighter shot.");
@@ -2172,8 +2190,9 @@ $("shRead").addEventListener("click", async () => {
       "Saved to your pieces. Compare the notation with your photo, fix anything misread under \u201cEdit the notes as text\u201d, then press Save piece." + (unsure ? "\n\n" + unsure : ""));
     $("shPaper").scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (err) {
-    shStatus(readError(err), true);
+    shStatus(stalled ? "Claude stopped answering, probably because the screen locked or the app went to the background. Press \u201cRead the notes\u201d to try again and keep the screen on." : readError(err), true);
   } finally {
+    clearInterval(ticker);
     btn.disabled = !SH.photos.length; btn.textContent = "Read the notes";
   }
 });
