@@ -14,12 +14,15 @@ A personal practice companion for learning the violin, in a single web page. It 
 | **Drone** | A sustained tonic (with optional fifth) in any key, for intonation practice. |
 | **Fingerboard** | A first-position map with finger numbers, scale highlighting and high/low 2nd-finger patterns per key, plus a note-naming quiz. |
 | **Scales** | Major and minor scales and arpeggios in one or two octaves. It listens as you play, scores each note in cents, and says which finger to move. Recent runs are kept so you can see progress. |
+| **Sheet music** | Photograph a page of music and Claude transcribes it to ABC notation. The app draws the notes so you can check them against the photo and fix misreads, then plays them (violin or piano sound) at any tempo with a metronome count-in or click track, or clicks only. It can also hand the tempo and time signature to the metronome, save pieces, and export a MIDI file. |
 | **Ear training** | Interval recognition (with a tune to remember each interval) and a sharp/flat/in-tune drill that narrows to the smallest pitch difference you can hear. |
 | **Listen back** | Open a recording: pitch trace and per-note intonation (cents sharp/flat), slow-down playback with A–B loop, and a rhythm check (tempo you played, rushing/dragging, evenness). |
 | **Posture** | Open a video of yourself playing (or use the camera): checks shoulder, head tilt, left wrist, bow path and bow elbow using on-device pose tracking. |
 | **Practice log** | Session timer, log with focus tags and notes, weekly chart, streak, and a repertoire tracker (current vs goal tempo). |
 
 All audio analysis is plain signal processing (YIN pitch detection, onset detection). The posture tab uses Google's MediaPipe pose model, which runs entirely in the browser; no audio or video leaves your device.
+
+The sheet-music tab is the one exception: reading a photo sends it to the Claude API (model `claude-opus-5-5`) using your own API key, which is stored only in your browser. The Anthropic SDK is bundled in `anthropic/` rather than loaded from a CDN, so no third-party script runs on the page that holds the key. Drawing, playback and MIDI export run locally with [abcjs](https://www.abcjs.net/); the instrument samples download from the abcjs soundfont site the first time you press Play.
 
 ## Running it
 
@@ -38,4 +41,11 @@ Your log, repertoire and settings are stored in the browser's `localStorage`. Wh
 
 - `index.html` contains the whole app: HTML, CSS and JavaScript.
 - `pose/` holds MediaPipe Tasks Vision 0.10.14 (Apache 2.0) and the `pose_landmarker_lite` model, stored base64-encoded as `.b64.txt`.
+- `abcjs/` holds abcjs 6.7.1 (MIT), which draws and plays the sheet-music tab's notation.
+- `anthropic/sdk.min.mjs` is the Anthropic TypeScript SDK 0.131.0 (MIT) built as a single browser ES module for the sheet-music tab. To rebuild it for a newer version:
+
+  ```sh
+  npm i @anthropic-ai/sdk@<version> esbuild
+  npx esbuild node_modules/@anthropic-ai/sdk/index.mjs --bundle --format=esm --platform=browser --minify --legal-comments=eof --outfile=anthropic/sdk.min.mjs
+  ```
 - `docs/feature-brainstorm.md` is the original feature brainstorm.
