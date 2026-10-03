@@ -35,7 +35,22 @@ python3 -m http.server 8000
 
 Opening `index.html` directly from disk also works. In that case the posture tab loads MediaPipe from the jsDelivr and Google CDNs instead of `pose/`. The microphone and camera need `localhost` or HTTPS, so GitHub Pages works well too.
 
-Your log, repertoire and settings are stored in the browser's `localStorage`. When the page runs as a Claude artifact, the log and repertoire sync to your account instead.
+Your log, repertoire and settings are stored in the browser's `localStorage`. Saved sheet-music pieces (notes, tempo and the original photos) are kept in the browser's IndexedDB. When the page runs as a Claude artifact, the log and repertoire sync to your account instead.
+
+## Google Drive sync for sheet music
+
+The sheet-music tab can sync your saved pieces to a "Violin Practice Room" folder in Google Drive, so they survive a reinstall and appear on every device. Sign-in is a plain OAuth redirect to Google and back, so no Google script runs on the page. The `drive.file` scope lets the app see only the files it created.
+
+One-time setup by the app's owner in [Google Cloud Console](https://console.cloud.google.com/):
+
+1. Use a project (new or existing) and enable the **Google Drive API**.
+2. On the **OAuth consent screen**, choose External, add the `.../auth/drive.file` scope, and add your Google account as a test user.
+3. Create an **OAuth client ID** of type Web application:
+   - Authorized JavaScript origins: `https://violin.daiyip.com`
+   - Authorized redirect URIs: `https://violin.daiyip.com/`
+4. Put the client ID in `GOOGLE_CLIENT_ID` in `index.html` (violin.daiyip.com's is already there), or paste it under "Google client ID" in the app. It is not a secret.
+
+While the consent screen is in Testing, only the listed test users can sign in. Sync is last-writer-wins per piece; deleting a piece on one device deletes it everywhere after the next sync.
 
 ## Files
 
