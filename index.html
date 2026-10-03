@@ -504,13 +504,13 @@ details>summary:hover{color:var(--ink)}
         <div class="stack" style="gap:8px;margin-top:10px">
           <!-- A login-shaped form so Safari offers to save the key to iCloud Keychain and to autofill it on your other devices. -->
           <form class="row" id="shKeyForm" method="post" action="#" autocomplete="on">
-            <input type="text" name="username" autocomplete="username" value="Claude API key" readonly tabindex="-1" aria-hidden="true" class="vh">
+            <input type="text" name="username" autocomplete="username" value="Claude API key" tabindex="-1" aria-hidden="true" class="vh">
             <input type="password" id="shKey" name="password" placeholder="sk-ant-…" autocomplete="current-password" spellcheck="false" style="flex:1 1 220px;min-width:0" aria-label="Claude API key">
             <button class="btn" type="submit" id="shKeySave">Save</button>
             <button class="btn" type="button" id="shKeyForget">Forget</button>
           </form>
           <p class="small muted" style="margin:0">Reading a photo needs your own key from console.anthropic.com. It is kept in this browser and sent only to Anthropic, together with the photo. A page usually costs a few cents.</p>
-          <p class="small muted" style="margin:0">On an iPhone or Mac, Safari may offer to save the key to iCloud Keychain when you tap Save; on your other devices, tap the field and choose it from the suggestions. You can also add it yourself in the Passwords app under violin.daiyip.com.</p>
+          <p class="small muted" style="margin:0">When you tap Save, Safari may offer to save the key to iCloud Keychain (Chrome to its own password manager); on your other devices, tap the field and choose it from the suggestions. If no offer appears, add it yourself in the Passwords app under violin.daiyip.com.</p>
         </div>
       </details>
     </div>
@@ -2115,8 +2115,12 @@ function keyState(){ $("shKeyState").textContent = store.get("shKey", "") ? "· 
 function saveKey(){
   const v = $("shKey").value.trim(); if (!v) return;
   store.set("shKey", v); keyState();
-  // Clearing the field right away can stop Safari from offering to save it to Keychain, so wait a moment.
-  setTimeout(() => { $("shKey").value = ""; }, 2000);
+  // Chrome and Edge offer to save a credential stored through this API; Safari ignores it and goes by the form instead.
+  if (window.PasswordCredential && navigator.credentials) navigator.credentials.store(new PasswordCredential({ id: "Claude API key", password: v, name: "Claude API key" })).catch(() => {});
+  // Safari offers to save a password when a submitted login form goes away, as if the login had worked, so fold the
+  // panel shut; the field is cleared only later because an emptied field gives it nothing to save.
+  setTimeout(() => { document.querySelector(".shkey").open = false; }, 300);
+  setTimeout(() => { $("shKey").value = ""; }, 4000);
   if (SH.photos.length) shStatus("Key saved. Press \u201cRead the notes\u201d.");
 }
 $("shKeyForm").addEventListener("submit", e => { e.preventDefault(); saveKey(); });
