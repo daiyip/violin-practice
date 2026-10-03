@@ -10,9 +10,10 @@ A personal practice companion for learning the violin, in a single web page. It 
 | --- | --- |
 | **Today** | Builds a timed practice plan (15–60 min) from your log, your pieces and your ear-training results. Each step opens the tool it needs. |
 | **Tuner** | Reference tones for G, D, A and E, plus a live cents meter from the microphone. |
-| **Metronome** | Accents, subdivisions, tap tempo, Italian tempo markings and a speed trainer that adds a few bpm every few bars. |
+| **Metronome** | Tap each beat to make it accented, normal or silent; 1–7 beats, subdivisions, tap tempo, silent bars for checking your pulse, and a speed trainer (steady climb or two up, one back) from a start tempo to a goal. |
 | **Drone** | A sustained tonic (with optional fifth) in any key, for intonation practice. |
 | **Fingerboard** | A first-position map with finger numbers, scale highlighting and high/low 2nd-finger patterns per key, plus a note-naming quiz. |
+| **Scales** | Major and minor scales and arpeggios in one or two octaves. It listens as you play, scores each note in cents, and says which finger to move. Recent runs are kept so you can see progress. |
 | **Ear training** | Interval recognition (with a tune to remember each interval) and a sharp/flat/in-tune drill that narrows to the smallest pitch difference you can hear. |
 | **Listen back** | Open a recording: pitch trace and per-note intonation (cents sharp/flat), slow-down playback with A–B loop, and a rhythm check (tempo you played, rushing/dragging, evenness). |
 | **Posture** | Open a video of yourself playing (or use the camera): checks shoulder, head tilt, left wrist, bow path and bow elbow using on-device pose tracking. |
