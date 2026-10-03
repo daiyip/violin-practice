@@ -278,6 +278,7 @@ form .field>span{font-size:13px;color:var(--muted)}
 .paper .abcjs-note.hl,.paper .abcjs-rest.hl{fill:var(--accent);color:var(--accent)}
 details>summary{cursor:pointer;color:var(--muted)}
 details>summary:hover{color:var(--ink)}
+.vh{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);border:0!important;opacity:0}
 .empty{padding:24px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:8px}
 @media (max-width:520px){
   .readout .big{font-size:52px}.bpm .num{font-size:60px}
@@ -501,12 +502,15 @@ details>summary:hover{color:var(--ink)}
       <details class="shkey">
         <summary class="small">Claude API key <span class="muted" id="shKeyState"></span></summary>
         <div class="stack" style="gap:8px;margin-top:10px">
-          <div class="row">
-            <input type="password" id="shKey" placeholder="sk-ant-…" autocomplete="off" spellcheck="false" style="flex:1 1 220px;min-width:0" aria-label="Claude API key">
-            <button class="btn" id="shKeySave">Save</button>
-            <button class="btn" id="shKeyForget">Forget</button>
-          </div>
-          <p class="small muted" style="margin:0">Reading a photo needs your own key from console.anthropic.com. It is kept only in this browser and sent only to Anthropic, together with the photo. A page usually costs a few cents.</p>
+          <!-- A login-shaped form so Safari offers to save the key to iCloud Keychain and to autofill it on your other devices. -->
+          <form class="row" id="shKeyForm" method="post" action="#" autocomplete="on">
+            <input type="text" name="username" autocomplete="username" value="Claude API key" readonly tabindex="-1" aria-hidden="true" class="vh">
+            <input type="password" id="shKey" name="password" placeholder="sk-ant-…" autocomplete="current-password" spellcheck="false" style="flex:1 1 220px;min-width:0" aria-label="Claude API key">
+            <button class="btn" type="submit" id="shKeySave">Save</button>
+            <button class="btn" type="button" id="shKeyForget">Forget</button>
+          </form>
+          <p class="small muted" style="margin:0">Reading a photo needs your own key from console.anthropic.com. It is kept in this browser and sent only to Anthropic, together with the photo. A page usually costs a few cents.</p>
+          <p class="small muted" style="margin:0">On an iPhone or Mac, Safari may offer to save the key to iCloud Keychain when you tap Save; on your other devices, tap the field and choose it from the suggestions. You can also add it yourself in the Passwords app under violin.daiyip.com.</p>
         </div>
       </details>
     </div>
@@ -2108,11 +2112,16 @@ $("shFile").addEventListener("change", async e => {
 });
 
 function keyState(){ $("shKeyState").textContent = store.get("shKey", "") ? "· saved on this device" : "· not set"; }
-$("shKeySave").addEventListener("click", () => {
+function saveKey(){
   const v = $("shKey").value.trim(); if (!v) return;
-  store.set("shKey", v); $("shKey").value = ""; keyState();
+  store.set("shKey", v); keyState();
+  // Clearing the field right away can stop Safari from offering to save it to Keychain, so wait a moment.
+  setTimeout(() => { $("shKey").value = ""; }, 2000);
   if (SH.photos.length) shStatus("Key saved. Press \u201cRead the notes\u201d.");
-});
+}
+$("shKeyForm").addEventListener("submit", e => { e.preventDefault(); saveKey(); });
+// A key autofilled from Keychain is saved without needing a tap on Save.
+$("shKey").addEventListener("change", () => { if (/^sk-ant-\S{20,}$/.test($("shKey").value.trim()) && $("shKey").value.trim() !== store.get("shKey", "")) saveKey(); });
 $("shKeyForget").addEventListener("click", () => { store.set("shKey", ""); $("shKey").value = ""; keyState(); });
 keyState();
 
