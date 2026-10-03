@@ -48,7 +48,7 @@ One-time setup by the app's owner in [Google Cloud Console](https://console.clou
 3. Create an **OAuth client ID** of type Web application:
    - Authorized JavaScript origins: `https://violin.daiyip.com`
    - Authorized redirect URIs: `https://violin.daiyip.com/`
-4. Put the client ID in `GOOGLE_CLIENT_ID` in `index.html`, or paste it under "Google client ID" in the app. It is not a secret.
+4. Put the client ID in `GOOGLE_CLIENT_ID` in `index.html` (violin.daiyip.com's is already there), or paste it under "Google client ID" in the app. It is not a secret.
 
 While the consent screen is in Testing, only the listed test users can sign in. Sync is last-writer-wins per piece; deleting a piece on one device deletes it everywhere after the next sync.
 

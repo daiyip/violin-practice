@@ -2300,7 +2300,7 @@ $("shDel").addEventListener("click", async () => {
 
 /* Google Drive sync. Sign-in is a plain OAuth redirect to Google and back (no Google script runs on this page),
    with the drive.file scope: the app sees only the files it created, in a "Violin Practice Room" folder. */
-const GOOGLE_CLIENT_ID = "";
+const GOOGLE_CLIENT_ID = "526566192244-egjkhooilto2hl9g7opj4goc84olg63e.apps.googleusercontent.com";
 const G = {
   clientId: () => store.get("gClient", "") || GOOGLE_CLIENT_ID,
   token: () => { const t = store.get("gToken", null); return t && t.exp > Date.now() + 60000 ? t.access : null; },
