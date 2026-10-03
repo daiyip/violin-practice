@@ -39,12 +39,12 @@ Your log, repertoire and settings are stored in the browser's `localStorage`. Sa
 
 ## Google Drive sync for sheet music
 
-The sheet-music tab can sync your saved pieces to a "Violin Practice Room" folder in Google Drive, so they survive a reinstall and appear on every device. Sign-in is a plain OAuth redirect to Google and back, so no Google script runs on the page. The `drive.file` scope lets the app see only the files it created.
+The sheet-music tab can sync your saved pieces to a "Violin Practice Room" folder in Google Drive, so they survive a reinstall and appear on every device. Sign-in is a plain OAuth redirect to Google and back, so no Google script runs on the page. The `drive.file` scope lets the app see only the files it created. If you tick "Keep my keys in Google Drive" under the API key, your Claude and Gemini keys are also kept in a `keys.json` in Drive's hidden app folder (the `drive.appdata` scope), so any device where you connect Google Drive gets them. Anyone who gets into your Google account could read them, so set a spending limit on each key.
 
 One-time setup by the app's owner in [Google Cloud Console](https://console.cloud.google.com/):
 
 1. Use a project (new or existing) and enable the **Google Drive API**.
-2. On the **OAuth consent screen**, choose External, add the `.../auth/drive.file` scope, and add your Google account as a test user.
+2. On the **OAuth consent screen**, choose External, add the `.../auth/drive.file` and `.../auth/drive.appdata` scopes, and add your Google account as a test user.
 3. Create an **OAuth client ID** of type Web application:
    - Authorized JavaScript origins: `https://violin.daiyip.com`
    - Authorized redirect URIs: `https://violin.daiyip.com/`

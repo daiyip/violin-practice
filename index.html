@@ -513,6 +513,8 @@ details>summary:hover{color:var(--ink)}
             <button class="btn" type="submit" id="shKeySave">Save</button>
             <button class="btn" type="button" id="shKeyForget">Forget</button>
           </form>
+          <label class="row small"><input type="checkbox" id="shKeyDrive"> Keep my keys in Google Drive</label>
+          <p class="small muted" style="margin:0">With this on, your keys go to a hidden app folder in your Google Drive that only this app can see, and any device where you connect Google Drive gets them. Anyone who gets into your Google account could read them too, so set a spending limit on each key.</p>
           <p class="small muted" style="margin:0" id="shKeyHelp"></p>
           <p class="small muted" style="margin:0">When you tap Save, Safari may offer to save the key to iCloud Keychain (Chrome to its own password manager); on your other devices, tap the field and choose it from the suggestions. If no offer appears, add it yourself in the Passwords app under violin.daiyip.com.</p>
         </div>
@@ -2129,13 +2131,14 @@ const reader = () => READERS[$("shEngine").value] || READERS.claude;
 function keyState(){
   const r = reader();
   $("shKeyName").textContent = r.name + " API key";
-  $("shKeyState").textContent = store.get(r.store, "") ? "· saved on this device" : "· not set";
+  $("shKeyState").textContent = !store.get(r.store, "") ? "· not set" : store.get("gKeys", null) === true ? "· saved, kept in Google Drive" : "· saved on this device";
+  $("shKeyDrive").checked = store.get("gKeys", null) === true;
   $("shKeyUser").value = r.name + " API key"; $("shKey").placeholder = r.hint; $("shKey").setAttribute("aria-label", r.name + " API key");
   $("shKeyHelp").textContent = r.help;
 }
 function saveKey(){
   const v = $("shKey").value.trim(), r = reader(); if (!v) return;
-  store.set(r.store, v); keyState();
+  store.set(r.store, v); store.set("shKeysAt", Date.now()); keyState(); keysToDriveSoon();
   // Chrome and Edge offer to save a credential stored through this API; Safari ignores it and goes by the form instead.
   if (window.PasswordCredential && navigator.credentials) navigator.credentials.store(new PasswordCredential({ id: r.name + " API key", password: v, name: r.name + " API key" })).catch(() => {});
   // Safari offers to save a password when a submitted login form goes away, as if the login had worked, so fold the
@@ -2147,7 +2150,13 @@ function saveKey(){
 $("shKeyForm").addEventListener("submit", e => { e.preventDefault(); saveKey(); });
 // A key autofilled from Keychain is saved without needing a tap on Save.
 $("shKey").addEventListener("change", () => { const v = $("shKey").value.trim(), r = reader(); if (r.re.test(v) && v !== store.get(r.store, "")) saveKey(); });
-$("shKeyForget").addEventListener("click", () => { store.set(reader().store, ""); $("shKey").value = ""; keyState(); });
+$("shKeyForget").addEventListener("click", () => { store.set(reader().store, ""); store.set("shKeysAt", Date.now()); $("shKey").value = ""; keyState(); keysToDriveSoon(); });
+// Keys in Drive: off until ticked. On a new device the choice is still open (null), and finding keys in Drive turns it on.
+$("shKeyDrive").addEventListener("change", e => {
+  store.set("gKeys", e.target.checked); store.set("gKeysDrop", !e.target.checked); keyState();
+  if (e.target.checked && (!G.token() || !hasAppData())) googleSignIn(); else syncDrive();
+});
+function keysToDriveSoon(){ if (store.get("gKeys", null) === true) driveSoon(); }
 $("shEngine").value = READERS[store.get("shEngine", "")] ? store.get("shEngine", "") : "claude";
 $("shEngine").addEventListener("change", () => { store.set("shEngine", $("shEngine").value); $("shKey").value = ""; keyState(); });
 keyState();
@@ -2418,12 +2427,15 @@ const G = {
   api: "https://www.googleapis.com/drive/v3/", up: "https://www.googleapis.com/upload/drive/v3/",
   folderName: "Violin Practice Room", busy: false
 };
+// drive.file for the pieces folder; drive.appdata for the hidden app folder that can hold the API keys.
+const G_SCOPES = "https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.appdata";
+const hasAppData = () => (store.get("gScope", "") || "").includes("drive.appdata");
 const redirectUri = () => location.origin + location.pathname.replace(/index\.html$/, "");
 function googleSignIn(){
   const state = newId(); store.set("gState", state);
   location.assign("https://accounts.google.com/o/oauth2/v2/auth?" + new URLSearchParams({
     client_id: G.clientId(), redirect_uri: redirectUri(), response_type: "token", state,
-    scope: "https://www.googleapis.com/auth/drive.file", include_granted_scopes: "true"
+    scope: G_SCOPES, include_granted_scopes: "true"
   }));
 }
 // Back from Google: the token arrives in the URL fragment.
@@ -2435,7 +2447,7 @@ function takeGoogleToken(){
   store.set("gState", "");
   if (ok && q.get("access_token")){
     store.set("gToken", { access: q.get("access_token"), exp: Date.now() + (+q.get("expires_in") || 3600) * 1000 });
-    store.set("gOn", true);
+    store.set("gOn", true); store.set("gScope", q.get("scope") || "");
   } else SH.syncMsg = q.get("error") === "access_denied" ? "Google sign-in was cancelled." : "Google sign-in didn't complete. Try again.";
   return true;
 }
@@ -2495,10 +2507,39 @@ async function pullPiece(remote, local){
   await LIB.put({ id: d.id, title: d.title, abc: d.abc, bpm: d.bpm, photos, updatedAt: d.updatedAt,
     drive: { json: remote.id, photos: d.photoIds || [], syncedAt: d.updatedAt } });
 }
+// API keys live in one keys.json in Drive's hidden app folder; the newer side wins, so Save and Forget carry across devices.
+const KEY_STORES = () => Object.values(READERS).map(r => r.store);
+async function driveKeysFile(){
+  const q = encodeURIComponent("name='keys.json' and trashed=false");
+  const r = await gFetch(G.api + "files?spaces=appDataFolder&fields=files(id,appProperties)&q=" + q).then(r => r.json());
+  return (r.files || [])[0] || null;
+}
+async function syncKeys(){
+  const want = store.get("gKeys", null);
+  if (!hasAppData()) return;
+  if (want === false){
+    // Turned off here: remove the copy in Drive once (other devices keep the keys they already have).
+    if (store.get("gKeysDrop", false)){ const f = await driveKeysFile(); if (f) await gFetch(G.api + "files/" + f.id, { method: "DELETE" }); store.set("gKeysDrop", false); }
+    return;
+  }
+  const f = await driveKeysFile(), at = store.get("shKeysAt", 0), rAt = f ? +((f.appProperties || {}).updatedAt || 0) : 0;
+  if (f && (rAt > at || want === null)){
+    const d = await gFetch(G.api + "files/" + f.id + "?alt=media").then(r => r.json());
+    KEY_STORES().forEach(k => { if (typeof d[k] === "string") store.set(k, d[k]); });
+    store.set("shKeysAt", rAt); store.set("gKeys", true); keyState();
+  } else if (want === true && (!f || at > rAt)){
+    const data = { updatedAt: at || Date.now() }; KEY_STORES().forEach(k => { data[k] = store.get(k, ""); });
+    const meta = { name: "keys.json", appProperties: { updatedAt: String(data.updatedAt) } };
+    if (!f) meta.parents = ["appDataFolder"];
+    await gUpload(meta, new Blob([JSON.stringify(data)], { type: "application/json" }), f && f.id);
+  }
+}
 async function syncDrive(){
   if (G.busy || !store.get("gOn", false) || !G.token()) return renderSync();
   G.busy = true; SH.syncMsg = ""; renderSync();
   try {
+    if (store.get("gKeys", null) === true && !hasAppData()) SH.keyMsg = "To keep your keys in Google Drive, disconnect and connect Google Drive again so it can use the hidden app folder.";
+    else { SH.keyMsg = ""; await syncKeys().catch(e => { if (e.signin) throw e; SH.keyMsg = "Couldn't sync your keys with Google Drive: " + e.message + "."; }); }
     const before = store.get("gFolder", ""), folder = await gFolder();
     // A new folder (the old one was deleted or never existed): treat every local piece as not yet uploaded, never as deleted remotely.
     if (folder !== before) for (const p of await LIB.all()) if (p.drive){ p.drive = null; await LIB.put(p); }
@@ -2543,9 +2584,9 @@ function driveSoon(){ clearTimeout(driveT); driveT = setTimeout(syncDrive, 800);
 function ago(t){ const s = (Date.now() - t) / 1000; return s < 60 ? "just now" : s < 3600 ? Math.round(s / 60) + " min ago" : s < 86400 ? Math.round(s / 3600) + " h ago" : new Date(t).toLocaleDateString(); }
 function renderSync(){
   const on = store.get("gOn", false), tok = G.token(), last = store.get("gLast", 0), hasId = !!G.clientId();
-  $("shSyncState").textContent = SH.syncMsg || (!on ? "Saved on this device only." : G.busy ? "Syncing with Google Drive…" :
-    !tok ? "Google Drive sign-in has expired. Tap Sync now to reconnect." : last ? `Synced with Google Drive ${ago(last)}.` : "Connected to Google Drive.");
-  $("shSyncState").classList.toggle("bad", !!SH.syncMsg);
+  $("shSyncState").textContent = (SH.keyMsg ? SH.keyMsg + " " : "") + (SH.syncMsg || (!on ? "Saved on this device only." : G.busy ? "Syncing with Google Drive…" :
+    !tok ? "Google Drive sign-in has expired. Tap Sync now to reconnect." : last ? `Synced with Google Drive ${ago(last)}.` : "Connected to Google Drive."));
+  $("shSyncState").classList.toggle("bad", !!(SH.syncMsg || SH.keyMsg));
   $("shSyncBtn").textContent = on ? "Sync now" : "Connect Google Drive";
   $("shSyncBtn").disabled = G.busy || !hasId;
   $("shSyncOff").hidden = !on;
@@ -2558,7 +2599,7 @@ $("shSyncBtn").addEventListener("click", () => {
 $("shSyncOff").addEventListener("click", async () => {
   const t = store.get("gToken", null);
   if (t) fetch("https://oauth2.googleapis.com/revoke?token=" + encodeURIComponent(t.access), { method: "POST", mode: "no-cors" }).catch(() => {});
-  ["gToken", "gFolder", "gLast"].forEach(k => store.set(k, null)); store.set("gOn", false); SH.syncMsg = "";
+  ["gToken", "gFolder", "gLast", "gScope"].forEach(k => store.set(k, null)); store.set("gOn", false); SH.syncMsg = ""; SH.keyMsg = "";
   // Pieces stay here; forget their Drive links so a later connection uploads them afresh.
   for (const p of await LIB.all()){ if (p.deleted) await LIB.del(p.id); else if (p.drive){ p.drive = null; await LIB.put(p); } }
   renderSync();
