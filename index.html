@@ -52,7 +52,7 @@ h3{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mute
 .grid2>*{min-width:0}
 button.btn,label.btn{appearance:none;font:500 14px var(--f-body);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
 button.btn:hover,label.btn:hover{border-color:var(--muted)}
-button.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+button.btn.primary,label.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 button.btn.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 button.btn:disabled{opacity:.5;cursor:default}
 button:focus-visible,select:focus-visible,input:focus-visible,label.btn:focus-within{outline:2px solid var(--accent);outline-offset:2px}
@@ -275,7 +275,50 @@ form .field>span{font-size:13px;color:var(--muted)}
 .paper{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px;color:var(--ink);overflow:hidden}
 .paper .empty{border:0}
 .paper svg{display:block}
+.paper .shstart{fill:var(--good);color:var(--good)}
 .paper .abcjs-note.hl,.paper .abcjs-rest.hl{fill:var(--accent);color:var(--accent)}
+.shhead{display:flex;align-items:center;gap:10px}
+.btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+button.btn.icon,summary.btn.icon{padding:8px;min-width:40px;min-height:40px;justify-content:center;font-size:18px}
+button.btn.big{padding:12px 22px;font-size:16px}
+.shadd{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.shadd .btn{justify-content:center;padding:14px 10px;font-size:15px}
+.shlist{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);overflow:hidden}
+.shlist:empty{display:none}
+.shlist .item{display:flex;align-items:center;gap:12px;width:100%;text-align:left;appearance:none;background:none;border:0;border-bottom:1px solid var(--line);padding:10px 14px;color:var(--ink);font:inherit;cursor:pointer;min-height:60px}
+.shlist .item:last-child{border-bottom:0}
+.shlist .item:active{background:var(--sunk)}
+.shlist .item .ic{width:40px;height:40px;flex:none;border-radius:6px;background:var(--sunk);display:grid;place-items:center;color:var(--muted);overflow:hidden}
+.shlist .item .ic img{width:100%;height:100%;object-fit:cover}
+.shlist .item .ic svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.shlist .item .t{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.shlist .item .t b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.shlist .item .t span{font-size:12px;color:var(--muted)}
+.shlist .item .go{color:var(--muted)}
+.shtitle{margin:0;font-size:22px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.shmenu{position:relative}
+.shmenu>summary{list-style:none}
+.shmenu>summary::-webkit-details-marker{display:none}
+.shmenu-list{position:absolute;right:0;top:calc(100% + 6px);z-index:20;background:var(--surface);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.2);min-width:220px;display:flex;flex-direction:column;overflow:hidden}
+.shmenu-list button{appearance:none;background:none;border:0;border-bottom:1px solid var(--line);text-align:left;padding:13px 16px;font:inherit;color:var(--ink);cursor:pointer}
+.shmenu-list button:last-child{border-bottom:0}
+.shmenu-list button[hidden]{display:none}
+.shmenu-list .danger{color:var(--bad)}
+.shplay{position:sticky;bottom:0;z-index:5;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px calc(10px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:8px;box-shadow:0 -6px 18px rgba(0,0,0,.06)}
+.shplay #shClick{display:flex;flex-wrap:nowrap}
+.shplay #shClick button{flex:1;padding:8px 4px;font-family:var(--f-body)}
+.shbpm{display:flex;flex-direction:column;align-items:center;line-height:1.1;min-width:3.2em}
+.shbpm .num{font-family:var(--f-display);font-size:28px}
+.linkbtn{appearance:none;background:none;border:0;padding:0;color:var(--accent);font:inherit;text-decoration:underline;cursor:pointer}
+.shfsbar{display:none}
+#shMask{display:none}
+#shStage.full{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;flex-direction:column;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+#shStage.full .shfsbar{display:flex;align-items:center;gap:6px;padding:6px 8px;border-bottom:1px solid var(--line);background:var(--surface)}
+#shStage.full .paper{flex:1;border:0;border-radius:0;overflow:hidden;position:relative;padding:8px 12px}
+#shStage.full #shSvg{padding-bottom:100vh}
+#shStage.full #shMask{display:block;position:absolute;left:0;right:0;height:300vh;background:var(--bg)}
+#shStage.full #shMask[hidden]{display:none}
+body.shfull{overflow:hidden}
 details>summary{cursor:pointer;color:var(--muted)}
 details>summary:hover{color:var(--ink)}
 .vh{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);border:0!important;opacity:0}
@@ -484,61 +527,47 @@ details>summary:hover{color:var(--ink)}
 
   <!-- SHEET MUSIC -->
   <section id="p-sheet" role="tabpanel" aria-labelledby="t-sheet" class="stack" hidden>
-    <div>
-      <h2>Sheet music</h2>
-      <p class="lede">Photograph a page of music and Claude writes it out as notes the app can play. Check the notation against your photo, fix anything it misread, then play along with a violin sound and a metronome at your own tempo.</p>
-    </div>
-    <div class="panel stack">
-      <div class="row" style="justify-content:space-between">
-        <h3 style="margin:0">1 · Photo</h3>
-        <span class="small muted" id="shPhotoInfo"></span>
+    <!-- Four screens, one shown at a time: setup/settings, library, a new scan, and a piece. -->
+    <div id="shSetupV" class="stack" hidden>
+      <div class="shhead">
+        <button class="btn icon" id="shSetBack" aria-label="Back to pieces" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <h2 id="shSetTitle" style="margin:0">Set up sheet music</h2>
       </div>
-      <div class="row">
-        <label class="btn primary"><input type="file" id="shFile" accept="image/*" multiple hidden>Take or choose photos</label>
-        <button class="btn" id="shRead" disabled>Read the notes</button>
+      <p class="lede" id="shSetLede">Photograph a page of music and an AI writes it out as notes the app can draw and play. Three quick steps, once per device.</p>
+      <div class="panel stack">
+        <h3 style="margin:0">1 · Google Drive <span class="small muted">(optional)</span></h3>
+        <p class="small muted" style="margin:0">Keeps your pieces, and if you like your keys, on every device you sign in on.</p>
+        <div class="row" style="justify-content:space-between">
+          <span class="small muted" id="shSyncState" style="flex:1 1 200px">Saved on this device only.</span>
+          <span class="row"><button class="btn" id="shSyncBtn">Sign in with Google</button><button class="btn" id="shSyncOff" hidden>Disconnect</button></span>
+        </div>
       </div>
-      <div class="row small">
-        <label class="row">Read with <select id="shEngine" aria-label="Which AI reads the notes"><option value="claude">Claude</option><option value="gemini">Gemini Flash (faster)</option></select></label>
-        <label class="row"><input type="checkbox" id="shCareful"> Careful read <span class="muted">(slower)</span></label>
+      <div class="panel stack">
+        <h3 style="margin:0">2 · Who reads your photos</h3>
+        <label class="row small"><select id="shEngine" aria-label="Which AI reads the notes"><option value="claude">Claude (most accurate)</option><option value="gemini">Gemini Flash (faster)</option></select></label>
       </div>
-      <div class="shthumbs" id="shThumbs"></div>
-      <div class="note" id="shStatus" style="white-space:pre-line">One photo per page, taken straight on in good light. Choose several photos for a piece that runs over more than one page.</div>
-      <details class="shkey">
-        <summary class="small"><span id="shKeyName">Claude API key</span> <span class="muted" id="shKeyState"></span></summary>
-        <div class="stack" style="gap:8px;margin-top:10px">
+      <div class="panel stack">
+        <h3 style="margin:0">3 · <span id="shKeyName">Claude API key</span> <span class="small muted" id="shKeyState"></span></h3>
+        <div class="shkey stack" style="gap:8px">
           <!-- A login-shaped form so Safari offers to save the key to iCloud Keychain and to autofill it on your other devices. -->
           <form class="row" id="shKeyForm" method="post" action="#" autocomplete="on">
             <input type="text" name="username" id="shKeyUser" autocomplete="username" value="Claude API key" tabindex="-1" aria-hidden="true" class="vh">
-            <input type="password" id="shKey" name="password" placeholder="sk-ant-…" autocomplete="current-password" spellcheck="false" style="flex:1 1 220px;min-width:0" aria-label="Claude API key">
+            <input type="password" id="shKey" name="password" placeholder="sk-ant-…" autocomplete="current-password" spellcheck="false" style="flex:1 1 200px;min-width:0" aria-label="Claude API key">
             <button class="btn" type="submit" id="shKeySave">Save</button>
             <button class="btn" type="button" id="shKeyForget">Forget</button>
           </form>
-          <label class="row small"><input type="checkbox" id="shKeyDrive"> Keep my keys in Google Drive</label>
-          <p class="small muted" style="margin:0">With this on, your keys go to a hidden app folder in your Google Drive that only this app can see, and any device where you connect Google Drive gets them. Anyone who gets into your Google account could read them too, so set a spending limit on each key.</p>
           <p class="small muted" style="margin:0" id="shKeyHelp"></p>
-          <p class="small muted" style="margin:0">When you tap Save, Safari may offer to save the key to iCloud Keychain (Chrome to its own password manager); on your other devices, tap the field and choose it from the suggestions. If no offer appears, add it yourself in the Passwords app under violin.daiyip.com.</p>
-        </div>
-      </details>
-    </div>
-    <div class="panel stack">
-      <div class="row" style="justify-content:space-between">
-        <h3 style="margin:0">2 · Check the notes</h3>
-        <div class="row">
-          <select id="shLib" aria-label="Saved pieces"></select>
-          <button class="btn" id="shSave">Save piece</button>
-          <button class="btn" id="shDel" hidden>Delete</button>
+          <label class="row small"><input type="checkbox" id="shKeyDrive"> Keep my keys in Google Drive</label>
+          <details>
+            <summary class="small">About keeping keys</summary>
+            <p class="small muted">With "Keep my keys in Google Drive" on, your keys go to a hidden app folder in your Drive that only this app can see, and any device where you sign in to Google gets them. Anyone who gets into your Google account could read them too, so set a spending limit on each key.</p>
+            <p class="small muted" style="margin:0">When you tap Save, Safari may offer to save the key to iCloud Keychain (Chrome to its own password manager). If no offer appears, add it yourself in the Passwords app under violin.daiyip.com.</p>
+          </details>
         </div>
       </div>
-      <div class="paper" id="shPaper"><div class="empty">Notation appears here once a photo has been read, or when you open a saved piece.</div></div>
-      <div class="note" id="shWarn" hidden></div>
-      <details id="shAbcBox">
-        <summary class="small">Edit the notes as text (ABC notation)</summary>
-        <textarea id="shAbc" spellcheck="false" rows="10" style="margin-top:10px;font:13px/1.5 var(--f-mono)" aria-label="ABC notation"></textarea>
-        <p class="small muted" style="margin:6px 0 0">A misread note is usually one letter to fix: <span class="mono">c</span> is the C in the middle of the staff, <span class="mono">C</span> an octave lower, <span class="mono">^</span> sharp, <span class="mono">_</span> flat, <span class="mono">=</span> natural, and a number after a note sets its length.</p>
-      </details>
-      <div class="row" style="justify-content:space-between;border-top:1px solid var(--line);padding-top:12px">
-        <span class="small muted" id="shSyncState" style="flex:1 1 200px">Saved on this device only.</span>
-        <span class="row"><button class="btn" id="shSyncBtn">Connect Google Drive</button><button class="btn" id="shSyncOff" hidden>Disconnect</button></span>
+      <div class="row">
+        <button class="btn primary" id="shSetDone" disabled>Start</button>
+        <button class="btn" id="shSetSkip">Skip for now</button>
       </div>
       <details id="shGBox">
         <summary class="small">Google client ID <span class="muted" id="shGState"></span></summary>
@@ -548,29 +577,103 @@ details>summary:hover{color:var(--ink)}
             <button class="btn" id="shGSave">Save</button>
           </div>
           <p class="small muted" style="margin:0" id="shGNote">Drive sync needs the OAuth client ID from this app's Google Cloud project (see the README). It isn't a secret.</p>
-          <p class="small muted" style="margin:0">Pieces sync to a "Violin Practice Room" folder in your Drive. The app can only see files it created there.</p>
         </div>
       </details>
     </div>
-    <div class="panel stack">
-      <h3 style="margin:0">3 · Play along</h3>
-      <div class="bpm">
-        <button class="btn" id="shDown" aria-label="Slower">−</button>
-        <span class="num mono" id="shBpmNum">90</span>
-        <button class="btn" id="shUp" aria-label="Faster">+</button>
-        <div><div class="marking" id="shMeter">4/4</div><div class="small muted" id="shBeatUnit">beats per minute</div></div>
+
+    <div id="shLibV" class="stack" hidden>
+      <div class="shhead">
+        <button class="btn icon" id="shUp" aria-label="All pieces" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <h2 id="shLibTitle" style="margin:0;flex:1">Sheet music</h2>
+        <button class="btn icon" id="shGear" aria-label="Settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
       </div>
-      <input type="range" id="shBpm" min="30" max="240" value="90" aria-label="Playback tempo">
-      <div class="row" style="gap:14px 20px;align-items:flex-start">
-        <fieldset><legend>Sound</legend><div class="seg" id="shSound"></div></fieldset>
-        <fieldset><legend>Metronome</legend><div class="seg" id="shClick"></div></fieldset>
+      <div class="shadd">
+        <label class="btn primary"><input type="file" id="shCam" accept="image/*" capture="environment" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Take a photo</label>
+        <label class="btn"><input type="file" id="shFile" accept="image/*" multiple hidden><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 16l5-5 4 4 3-3 6 6"/></svg>Choose photos</label>
       </div>
+      <div class="shlist" id="shList"></div>
+      <div class="row" style="justify-content:space-between">
+        <button class="btn" id="shNewFolder"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h6l2 2h10v11H3z"/><path d="M12 11v5M9.5 13.5h5"/></svg>New folder</button>
+        <span class="small muted" id="shLibSync"></span>
+      </div>
+    </div>
+
+    <div id="shScanV" class="stack" hidden>
+      <div class="shhead">
+        <button class="btn icon" id="shScanBack" aria-label="Back to pieces"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <h2 style="margin:0;flex:1">New piece</h2>
+        <span class="small muted" id="shPhotoInfo"></span>
+      </div>
+      <div class="shthumbs" id="shThumbs"></div>
       <div class="row">
-        <button class="btn primary" id="shPlay" disabled>Play</button>
-        <button class="btn" id="shToMetro" disabled>Use in metronome</button>
-        <button class="btn" id="shMidi" disabled>Download MIDI</button>
+        <label class="btn"><input type="file" id="shMore" accept="image/*" multiple hidden>Add a page</label>
+        <label class="row small"><input type="checkbox" id="shCareful"> Careful read <span class="muted">(slower)</span></label>
       </div>
-      <div class="small muted" id="shPlayNote">"Count in" clicks one bar before the music starts. "Clicks only" plays the metronome without the melody, so you play the notes yourself.</div>
+      <button class="btn primary big" id="shRead" disabled>Read the notes</button>
+      <div class="note" id="shStatus" style="white-space:pre-line">One photo per page, taken straight on in good light.</div>
+      <p class="small muted" style="margin:0">Reading with <span id="shReaderName">Claude</span>. <button class="linkbtn" id="shReaderChange">Change</button></p>
+    </div>
+
+    <div id="shPieceV" class="stack" hidden>
+      <div class="shhead">
+        <button class="btn icon" id="shBack" aria-label="Back to pieces"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <div style="flex:1;min-width:0"><h2 id="shTitle" class="shtitle">Untitled</h2><div class="small muted" id="shWhere"></div></div>
+        <details class="shmenu" id="shMenu">
+          <summary class="btn icon" aria-label="More"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg></summary>
+          <div class="shmenu-list">
+            <button id="shMove">Move to folder…</button>
+            <button id="shEdit">Edit the notes</button>
+            <button id="shPhotosBtn">Show the photos</button>
+            <button id="shReread">Read the photos again</button>
+            <button id="shToMetro">Use in metronome</button>
+            <button id="shMidi">Download MIDI</button>
+            <button id="shDel" class="danger">Delete piece</button>
+          </div>
+        </details>
+      </div>
+      <div class="shthumbs" id="shPThumbs" hidden></div>
+      <div id="shStage">
+        <div class="shfsbar" id="shFsBar">
+          <button class="btn icon" id="shFsExit" aria-label="Exit full screen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+          <button class="btn icon" id="shPrev" aria-label="Previous page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+          <span class="small mono" id="shPageNo">1/1</span>
+          <button class="btn icon" id="shNext" aria-label="Next page"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+          <span style="flex:1"></span>
+          <button class="btn icon" id="shFsDown" aria-label="Slower">−</button>
+          <span class="mono" id="shFsBpm">90</span>
+          <button class="btn icon" id="shFsUp" aria-label="Faster">+</button>
+          <button class="btn primary" id="shFsPlay">Play</button>
+        </div>
+        <div class="paper" id="shPaper"><div id="shSvg"><div class="empty">Notation appears here once a photo has been read, or when you open a saved piece.</div></div><div id="shMask"></div></div>
+      </div>
+      <div class="note" id="shWarn" hidden></div>
+      <div class="note" id="shReadNote" style="white-space:pre-line" hidden></div>
+      <div class="small muted" id="shStartNote">Tap any note to start playing from there.</div>
+      <div class="shplay">
+        <div class="row" style="gap:10px;flex-wrap:nowrap">
+          <button class="btn primary big" id="shPlay" disabled>Play</button>
+          <button class="btn icon" id="shDown" aria-label="Slower">−</button>
+          <div class="shbpm"><span class="num mono" id="shBpmNum">90</span><span class="small muted" id="shBeatUnit">♩ per min</span></div>
+          <button class="btn icon" id="shUpBpm" aria-label="Faster">+</button>
+          <span style="flex:1"></span>
+          <button class="btn icon" id="shFull" aria-label="Full screen"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+        </div>
+        <div class="seg" id="shClick" aria-label="Metronome"></div>
+        <details>
+          <summary class="small">Sound and tempo</summary>
+          <div class="stack" style="gap:10px;margin-top:10px">
+            <input type="range" id="shBpm" min="30" max="240" value="90" aria-label="Playback tempo">
+            <div class="row"><span class="small muted">Sound</span><div class="seg" id="shSound"></div><span class="small muted">Time <b class="mono" id="shMeter">4/4</b></span></div>
+            <div class="small muted" id="shPlayNote">"Count in" clicks one bar before the music starts. "Clicks only" plays the metronome without the melody, so you play the notes yourself.</div>
+          </div>
+        </details>
+      </div>
+      <details id="shAbcBox">
+        <summary class="small">Edit the notes as text (ABC notation)</summary>
+        <textarea id="shAbc" spellcheck="false" rows="10" style="margin-top:10px;font:13px/1.5 var(--f-mono)" aria-label="ABC notation"></textarea>
+        <div class="row" style="margin-top:8px"><button class="btn" id="shSave">Save changes</button></div>
+        <p class="small muted" style="margin:6px 0 0">A misread note is usually one letter to fix: <span class="mono">c</span> is the C in the middle of the staff, <span class="mono">C</span> an octave lower, <span class="mono">^</span> sharp, <span class="mono">_</span> flat, <span class="mono">=</span> natural, and a number after a note sets its length.</p>
+      </details>
     </div>
   </section>
 
@@ -2089,7 +2192,18 @@ function loadAbcjs(){
   return abcLoad;
 }
 const SH = { photos: [], pieceId: null, syncMsg: "", tune: null, synth: null, timer: null, playing: false, bpm: store.get("shBpm", 90),
-  sound: store.get("shSound", "violin"), click: store.get("shClick", "count"), opened: false };
+  sound: store.get("shSound", "violin"), click: store.get("shClick", "count"), opened: false,
+  folder: store.get("shFolder", ""), start: null, full: false, pages: [0], linePage: {}, page: 0, curLine: -1, settings: false, returnTo: "lib" };
+
+// Screens: "setup" (first run, and settings later), "lib" (folders and pieces), "scan" (new photos), "piece" (notation and player).
+function shView(v){
+  if (v !== "piece"){ stopSheet(); if (SH.full) exitFull(); }
+  ["setup", "lib", "scan", "piece"].forEach(k => { $("sh" + k[0].toUpperCase() + k.slice(1) + "V").hidden = k !== v; });
+  if (v === "lib" || v === "piece") store.set("shView", v);
+  $("shMenu").open = false;
+  if (v === "lib") renderLib();
+  window.scrollTo(0, 0);
+}
 function shStatus(text, bad){ const n = $("shStatus"); n.textContent = text; n.classList.toggle("bad", !!bad); }
 
 // Photos are downscaled and re-encoded as JPEG (this also turns iPhone HEIC photos into something the API accepts).
@@ -2106,16 +2220,21 @@ async function shrinkPhoto(file, max){
     return { url: data, b64: data.slice(data.indexOf(",") + 1) };
   } finally { URL.revokeObjectURL(url); }
 }
-$("shFile").addEventListener("change", async e => {
+async function takePhotos(e, add){
   const files = [...e.target.files]; e.target.value = "";
   if (!files.length) return;
-  shStatus("Preparing the photos…");
+  if (!add){ SH.pieceId = null; store.set("shPiece", null); showPhotos([]); }
+  shView("scan"); shStatus("Preparing the photos…");
   const photos = [];
   for (const f of files){ try { photos.push(await shrinkPhoto(f, 2400)); } catch (err) {} }
-  SH.pieceId = null; store.set("shPiece", null); showPhotos(photos); renderLib();
-  if (!photos.length) shStatus("Those files couldn't be opened as pictures. Try a JPEG or PNG.", true);
-  else shStatus(store.get(reader().store, "") ? "Ready. Press \u201cRead the notes\u201d." : `Ready. Add your ${reader().name} API key below, then press \u201cRead the notes\u201d.`);
-});
+  showPhotos(SH.photos.concat(photos));
+  if (!SH.photos.length) shStatus("Those files couldn't be opened as pictures. Try a JPEG or PNG.", true);
+  else shStatus(`Ready. Press \u201cRead the notes\u201d, or add another page first.` + (store.get(reader().store, "") ? "" : ` You'll be asked for your ${reader().name} API key.`));
+}
+$("shCam").addEventListener("change", e => takePhotos(e, false));
+$("shFile").addEventListener("change", e => takePhotos(e, false));
+$("shMore").addEventListener("change", e => takePhotos(e, true));
+$("shScanBack").addEventListener("click", () => shView(SH.pieceId ? "piece" : "lib"));
 
 // Two readers: Claude (Anthropic SDK) and Gemini (plain fetch to Google's API). Each has its own key, saved through the
 // same login-shaped form; the hidden username tells Keychain which key is which.
@@ -2135,17 +2254,17 @@ function keyState(){
   $("shKeyDrive").checked = store.get("gKeys", null) === true;
   $("shKeyUser").value = r.name + " API key"; $("shKey").placeholder = r.hint; $("shKey").setAttribute("aria-label", r.name + " API key");
   $("shKeyHelp").textContent = r.help;
+  $("shReaderName").textContent = r.name;
+  $("shSetDone").disabled = !SH.settings && !store.get(r.store, "");
 }
 function saveKey(){
   const v = $("shKey").value.trim(), r = reader(); if (!v) return;
   store.set(r.store, v); store.set("shKeysAt", Date.now()); keyState(); keysToDriveSoon();
   // Chrome and Edge offer to save a credential stored through this API; Safari ignores it and goes by the form instead.
   if (window.PasswordCredential && navigator.credentials) navigator.credentials.store(new PasswordCredential({ id: r.name + " API key", password: v, name: r.name + " API key" })).catch(() => {});
-  // Safari offers to save a password when a submitted login form goes away, as if the login had worked, so fold the
-  // panel shut; the field is cleared only later because an emptied field gives it nothing to save.
-  setTimeout(() => { document.querySelector(".shkey").open = false; }, 300);
+  // Safari offers to save a password when a submitted login form goes away, as if the login had worked (here, when
+  // Start or Done closes the setup screen); the field is cleared only later because an emptied field gives it nothing to save.
   setTimeout(() => { $("shKey").value = ""; }, 4000);
-  if (SH.photos.length) shStatus("Key saved. Press \u201cRead the notes\u201d.");
 }
 $("shKeyForm").addEventListener("submit", e => { e.preventDefault(); saveKey(); });
 // A key autofilled from Keychain is saved without needing a tap on Save.
@@ -2159,6 +2278,21 @@ $("shKeyDrive").addEventListener("change", e => {
 function keysToDriveSoon(){ if (store.get("gKeys", null) === true) driveSoon(); }
 $("shEngine").value = READERS[store.get("shEngine", "")] ? store.get("shEngine", "") : "claude";
 $("shEngine").addEventListener("change", () => { store.set("shEngine", $("shEngine").value); $("shKey").value = ""; keyState(); });
+// Setup shows once, until a key is saved or it is skipped; the gear on the library reopens it as Settings.
+const hasAnyKey = () => Object.values(READERS).some(r => store.get(r.store, ""));
+function setupMode(settings){
+  SH.settings = settings;
+  $("shSetTitle").textContent = settings ? "Settings" : "Set up sheet music";
+  $("shSetLede").hidden = settings; $("shSetBack").hidden = !settings; $("shSetSkip").hidden = settings; $("shGBox").hidden = !settings;
+  $("shSetDone").textContent = settings ? "Done" : "Start";
+  keyState(); renderSync(); shView("setup");
+}
+function leaveSetup(){ store.set("shSetup", true); shView(SH.returnTo || "lib"); }
+$("shSetDone").addEventListener("click", leaveSetup);
+$("shSetSkip").addEventListener("click", leaveSetup);
+$("shSetBack").addEventListener("click", leaveSetup);
+$("shGear").addEventListener("click", () => { SH.returnTo = "lib"; setupMode(true); });
+$("shReaderChange").addEventListener("click", () => { SH.returnTo = "scan"; setupMode(true); });
 keyState();
 
 function readError(err, r){
@@ -2250,7 +2384,7 @@ async function readGemini(key, careful, p){
 }
 $("shRead").addEventListener("click", async () => {
   const r = reader(), key = store.get(r.store, "");
-  if (!key){ document.querySelector(".shkey").open = true; $("shKey").focus(); shStatus(`Add your ${r.name} API key first. It stays on this device.`, true); return; }
+  if (!key){ SH.returnTo = "scan"; setupMode(true); $("shKey").focus(); return; }
   if (!SH.photos.length) return;
   const btn = $("shRead"); btn.disabled = true; btn.textContent = "Reading…";
   const careful = $("shCareful").checked, pages = SH.photos.length === 1 ? "the page" : SH.photos.length + " pages";
@@ -2272,11 +2406,13 @@ $("shRead").addEventListener("click", async () => {
     const abc = (m ? m[1] : text).trim();
     if (!/^K:/m.test(abc)) throw new Error("The reply didn't contain readable notation. Try again, or with a clearer photo.");
     const unsure = m ? text.slice(text.indexOf(m[0]) + m[0].length).trim() : "";
+    SH.start = null; shView("piece");
     await setAbc(abc, true);
     await savePiece();   // a read costs money, so the result is kept straight away
-    shStatus((out.cut ? "The piece was too long to finish; the end may be missing. " : "Done. ") +
-      "Saved to your pieces. Compare the notation with your photo, fix anything misread under \u201cEdit the notes as text\u201d, then press Save piece." + (unsure ? "\n\n" + unsure : ""));
-    $("shPaper").scrollIntoView({ behavior: "smooth", block: "start" });
+    pieceHeader(); shStatus("");
+    $("shReadNote").hidden = false;
+    $("shReadNote").textContent = (out.cut ? "The piece was too long to finish; the end may be missing. " : "Read and saved. ") +
+      "Compare the notes with your photo (\u22ef, then Show the photos) and fix anything misread under Edit the notes." + (unsure ? "\n\n" + unsure : "");
   } catch (err) {
     shStatus(stalled ? `${r.name} stopped answering, probably because the screen locked or the app went to the background. Press \u201cRead the notes\u201d to try again and keep the screen on.` : readError(err, r), true);
   } finally {
@@ -2288,7 +2424,7 @@ $("shRead").addEventListener("click", async () => {
 // Notation
 function setShBpm(v){
   SH.bpm = Math.max(30, Math.min(240, Math.round(v)));
-  $("shBpmNum").textContent = SH.bpm; $("shBpm").value = SH.bpm; store.set("shBpm", SH.bpm);
+  $("shBpmNum").textContent = SH.bpm; $("shFsBpm").textContent = SH.bpm; $("shBpm").value = SH.bpm; store.set("shBpm", SH.bpm);
 }
 const BEAT_UNIT = { "0.25": "♩", "0.375": "♩.", "0.5": "half note", "0.125": "♪", "0.75": "dotted half" };
 async function renderSheet(takeTempo){
@@ -2296,28 +2432,30 @@ async function renderSheet(takeTempo){
   const abc = $("shAbc").value;
   let A;
   try { A = await loadAbcjs(); } catch (e) {
-    $("shPaper").innerHTML = '<div class="empty">The notation library didn\'t load. Check your internet connection and reopen this tab.</div>'; return;
+    $("shSvg").innerHTML = '<div class="empty">The notation library didn\'t load. Check your internet connection and reopen this tab.</div>'; return;
   }
   SH.tune = null;
   if (abc.trim()){
     // Wide screens keep the photo's line breaks; phones re-wrap to about four bars a line so the notes stay readable.
     const w = $("shPaper").clientWidth - 18, narrow = w < 560;
-    const tune = A.renderAbc("shPaper", abc, { add_classes: true, foregroundColor: "currentColor", paddingleft: 0, paddingright: 0, paddingtop: 4, paddingbottom: 4,
-      responsive: "resize", staffwidth: narrow ? 440 : 740,
+    const tune = A.renderAbc("shSvg", abc, { add_classes: true, foregroundColor: "currentColor", paddingleft: 0, paddingright: 0, paddingtop: 4, paddingbottom: 4,
+      responsive: "resize", staffwidth: narrow ? 440 : 740, selectionColor: "currentColor", clickListener: setStart,
       wrap: narrow ? { minSpacing: 1.5, maxSpacing: 2.7, preferredMeasuresPerLine: 3 } : undefined })[0];
     SH.width = w;
     if (tune && tune.lines && tune.lines.some(l => l.staff)) SH.tune = tune;
   }
-  if (!SH.tune) $("shPaper").innerHTML = '<div class="empty">' + (abc.trim() ? "No notes to show yet. Check the text below for a missing K: line." :
-    'Notation appears here once a photo has been read, or when you open a saved piece. Try the example from the list above.') + "</div>";
+  if (!SH.tune) $("shSvg").innerHTML = '<div class="empty">' + (abc.trim() ? "No notes to show yet. Check Edit the notes for a missing K: line." :
+    "Notation appears here once a photo has been read.") + "</div>";
   const warn = SH.tune && SH.tune.warnings ? SH.tune.warnings.map(w => w.replace(/<[^>]+>/g, "")) : [];
   $("shWarn").hidden = !warn.length;
   $("shWarn").textContent = warn.length ? `Some of the text couldn't be read as music (${warn.length}): ` + warn.slice(0, 3).join(" · ") : "";
-  ["shPlay", "shToMetro", "shMidi"].forEach(id => $(id).disabled = !SH.tune);
+  ["shPlay", "shFsPlay", "shToMetro", "shMidi"].forEach(id => $(id).disabled = !SH.tune);
+  markStart();
+  if (SH.full) paginate();
   if (!SH.tune){ $("shMeter").textContent = "–"; return; }
   const mf = SH.tune.getMeterFraction();
   $("shMeter").textContent = mf.num + "/" + mf.den;
-  $("shBeatUnit").textContent = "beats per minute (" + (BEAT_UNIT[String(SH.tune.getBeatLength())] || "beat") + ")";
+  $("shBeatUnit").textContent = (BEAT_UNIT[String(SH.tune.getBeatLength())] || "beats") + " per min";
   if (takeTempo){
     const t = SH.tune.metaText && SH.tune.metaText.tempo;
     setShBpm(t && t.bpm ? SH.tune.getBpm(t) : 80);
@@ -2366,33 +2504,73 @@ async function migrateLib(){
   for (const p of old) await LIB.put({ id: newId(), title: p.title, abc: p.abc, bpm: p.bpm || 90, photos: [], updatedAt: Date.now() });
   try { localStorage.removeItem("vpr:shLib"); } catch (e) {}
 }
+const IC = {
+  folder: '<svg viewBox="0 0 24 24"><path d="M3 6h6l2 2h10v11H3z"/></svg>',
+  note: '<svg viewBox="0 0 24 24"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>',
+  go: '<svg class="go" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5l7 7-7 7"/></svg>'
+};
+const libFolders = lib => [...new Set(store.get("shFolders", []).concat(lib.map(p => p.folder || "").filter(Boolean)))].sort((a, b) => a.localeCompare(b));
 async function renderLib(){
-  const lib = (await LIB.all()).filter(p => !p.deleted).sort((a, b) => a.title.localeCompare(b.title));
-  $("shLib").innerHTML = `<option value="">${lib.length ? "Open a piece…" : "No saved pieces yet"}</option><option value="ex">Example: Minuet in G</option>` +
-    lib.map(p => `<option value="${p.id}">${escHtml(p.title)}</option>`).join("");
-  $("shLib").value = SH.pieceId && lib.some(p => p.id === SH.pieceId) ? SH.pieceId : "";
-  $("shDel").hidden = !SH.pieceId;
+  const lib = (await LIB.all()).filter(p => !p.deleted), folders = libFolders(lib);
+  if (SH.folder && !folders.includes(SH.folder)){ SH.folder = ""; store.set("shFolder", ""); }
+  const here = lib.filter(p => (p.folder || "") === SH.folder).sort((a, b) => a.title.localeCompare(b.title));
+  const row = (attr, ic, title, sub) => `<button class="item" ${attr}><span class="ic">${ic}</span><span class="t"><b>${escHtml(title)}</b><span>${escHtml(sub)}</span></span>${IC.go}</button>`;
+  const rows = [];
+  if (!SH.folder) folders.forEach(f => { const n = lib.filter(p => p.folder === f).length; rows.push(row(`data-folder="${escHtml(f)}"`, IC.folder, f, n + (n === 1 ? " piece" : " pieces"))); });
+  here.forEach(p => { const n = (p.photos || []).length;
+    rows.push(row(`data-id="${p.id}"`, n ? `<img src="${p.photos[0]}" alt="">` : IC.note, p.title, (n ? n + (n === 1 ? " page · " : " pages · ") : "") + new Date(p.updatedAt).toLocaleDateString())); });
+  if (!SH.folder) rows.push(row('data-id="ex"', IC.note, "Example: Minuet in G", "Try playing along"));
+  $("shList").innerHTML = rows.join("") || '<div class="empty" style="border:0">No pieces in this folder yet. Take a photo to add one here. <button class="linkbtn" id="shRmFolder">Remove this folder</button></div>';
+  $("shLibTitle").textContent = SH.folder || "Sheet music"; $("shUp").hidden = !SH.folder;
 }
+$("shList").addEventListener("click", e => {
+  if (e.target.id === "shRmFolder"){ store.set("shFolders", store.get("shFolders", []).filter(f => f !== SH.folder)); SH.folder = ""; store.set("shFolder", ""); renderLib(); return; }
+  const it = e.target.closest(".item"); if (!it) return;
+  if (it.dataset.folder != null){ SH.folder = it.dataset.folder; store.set("shFolder", SH.folder); renderLib(); window.scrollTo(0, 0); return; }
+  if (it.dataset.id === "ex") openExample(); else openPiece(it.dataset.id);
+});
+$("shUp").addEventListener("click", () => { SH.folder = ""; store.set("shFolder", ""); renderLib(); });
+$("shNewFolder").addEventListener("click", () => {
+  const name = (prompt("Name of the new folder") || "").trim().slice(0, 60); if (!name) return;
+  store.set("shFolders", [...new Set(store.get("shFolders", []).concat(name))]);
+  SH.folder = name; store.set("shFolder", name); renderLib();
+});
 function showPhotos(photos){
   SH.photos = photos;
   $("shThumbs").innerHTML = photos.map((p, i) => `<img src="${p.url}" alt="Page ${i + 1}">`).join("");
   $("shPhotoInfo").textContent = photos.length ? photos.length + (photos.length === 1 ? " page" : " pages") : "";
   $("shRead").disabled = !photos.length;
+  $("shPThumbs").innerHTML = $("shThumbs").innerHTML;
 }
 const asPhoto = url => ({ url, b64: url.slice(url.indexOf(",") + 1) });
 async function openPiece(id){
-  const p = await LIB.get(id); if (!p || p.deleted) return;
-  SH.pieceId = id; store.set("shPiece", id);
+  const p = await LIB.get(id); if (!p || p.deleted) return false;
+  SH.pieceId = id; store.set("shPiece", id); SH.start = null;
   showPhotos((p.photos || []).map(asPhoto));
+  shView("piece"); $("shReadNote").hidden = true; $("shPThumbs").hidden = true; $("shAbcBox").open = false;
   await setAbc(p.abc, true);
   if (p.bpm) setShBpm(p.bpm);
-  renderLib();
+  pieceHeader(p);
+  return true;
+}
+async function openExample(){
+  SH.pieceId = null; store.set("shPiece", null); SH.start = null; showPhotos([]);
+  shView("piece"); $("shReadNote").hidden = true; $("shAbcBox").open = false;
+  await setAbc(SH_EXAMPLE, true); pieceHeader(null);
+}
+async function pieceHeader(p){
+  if (p === undefined) p = SH.pieceId ? await LIB.get(SH.pieceId) : null;
+  $("shTitle").textContent = p ? p.title : tuneTitle($("shAbc").value);
+  $("shWhere").textContent = p ? (p.folder ? "In " + p.folder : "") : "Example";
+  ["shMove", "shDel"].forEach(id => $(id).hidden = !p);
+  $("shPhotosBtn").hidden = $("shReread").hidden = !SH.photos.length;
 }
 // Saves the open piece (or a new one with the current photos) and returns it.
 async function savePiece(){
   const abc = $("shAbc").value.trim(); if (!abc) return null;
   const old = SH.pieceId ? await LIB.get(SH.pieceId) : null;
-  const p = old && !old.deleted ? old : { id: newId(), photos: SH.photos.map(x => x.url) };
+  const p = old && !old.deleted ? old : { id: newId(), photos: SH.photos.map(x => x.url), folder: SH.folder };
+  if (old && !old.deleted) p.photos = SH.photos.map(x => x.url);
   Object.assign(p, { title: tuneTitle(abc), abc, bpm: SH.bpm, updatedAt: Date.now() });
   await LIB.put(p);
   SH.pieceId = p.id; store.set("shPiece", p.id);
@@ -2400,22 +2578,32 @@ async function savePiece(){
   await renderLib(); driveSoon();
   return p;
 }
-$("shLib").addEventListener("change", async e => {
-  const v = e.target.value;
-  if (v === "ex"){ SH.pieceId = null; store.set("shPiece", null); showPhotos([]); await setAbc(SH_EXAMPLE, true); renderLib(); return; }
-  if (v) openPiece(v);
-});
 $("shSave").addEventListener("click", async () => {
   if (!await savePiece()) return;
-  $("shSave").textContent = "Saved"; setTimeout(() => $("shSave").textContent = "Save piece", 1500);
+  pieceHeader();
+  $("shSave").textContent = "Saved"; setTimeout(() => $("shSave").textContent = "Save changes", 1500);
+});
+$("shBack").addEventListener("click", () => shView("lib"));
+document.querySelector(".shmenu-list").addEventListener("click", () => { $("shMenu").open = false; });
+$("shEdit").addEventListener("click", () => { $("shAbcBox").open = true; $("shAbcBox").scrollIntoView({ behavior: "smooth", block: "start" }); });
+$("shPhotosBtn").addEventListener("click", () => { $("shPThumbs").hidden = !$("shPThumbs").hidden; });
+$("shReread").addEventListener("click", () => { shView("scan"); shStatus("Press \u201cRead the notes\u201d to read these photos again. The new notes replace the current ones."); });
+$("shMove").addEventListener("click", async () => {
+  const p = SH.pieceId && await LIB.get(SH.pieceId); if (!p) return;
+  const all = libFolders((await LIB.all()).filter(x => !x.deleted));
+  const name = prompt("Move to which folder? Type a new name to make one, or leave it empty for no folder." + (all.length ? "\n\nFolders: " + all.join(", ") : ""), p.folder || "");
+  if (name === null) return;
+  p.folder = name.trim().slice(0, 60); p.updatedAt = Date.now(); await LIB.put(p);
+  if (p.folder) store.set("shFolders", [...new Set(store.get("shFolders", []).concat(p.folder))]);
+  SH.folder = p.folder; store.set("shFolder", SH.folder);
+  pieceHeader(p); driveSoon();
 });
 $("shDel").addEventListener("click", async () => {
   const p = SH.pieceId && await LIB.get(SH.pieceId); if (!p) return;
   if (!confirm(`Delete \u201c${p.title}\u201d${p.drive ? " here and from Google Drive" : ""}?`)) return;
   if (p.drive) await LIB.put(Object.assign(p, { deleted: true, updatedAt: Date.now() })); else await LIB.del(p.id);
   SH.pieceId = null; store.set("shPiece", null);
-  showPhotos([]); await setAbc("", false); await renderLib(); driveSoon();
-  shStatus(`Deleted \u201c${p.title}\u201d.`);
+  showPhotos([]); await setAbc("", false); shView("lib"); driveSoon();
 });
 
 /* Google Drive sync. Sign-in is a plain OAuth redirect to Google and back (no Google script runs on this page),
@@ -2490,7 +2678,7 @@ async function pushPiece(p, folder, remote){
     }
     p.drive = Object.assign({}, p.drive, { photos: ids });
   }
-  const data = { id: p.id, title: p.title, abc: p.abc, bpm: p.bpm, updatedAt: p.updatedAt, photoIds: p.drive.photos };
+  const data = { id: p.id, title: p.title, abc: p.abc, bpm: p.bpm, folder: p.folder || "", updatedAt: p.updatedAt, photoIds: p.drive.photos };
   const meta = { name: fileStem(p.title) + ".json", appProperties: { vprId: p.id, vprKind: "piece", updatedAt: String(p.updatedAt) } };
   if (!remote) meta.parents = [folder];
   const json = await gUpload(meta, new Blob([JSON.stringify(data, null, 1)], { type: "application/json" }), remote && remote.id);
@@ -2504,7 +2692,7 @@ async function pullPiece(remote, local){
   if (!same) for (const id of d.photoIds || []){
     try { photos.push(await blobToDataUrl(await gFetch(G.api + "files/" + id + "?alt=media").then(r => r.blob()))); } catch (e) { if (e.signin) throw e; }
   }
-  await LIB.put({ id: d.id, title: d.title, abc: d.abc, bpm: d.bpm, photos, updatedAt: d.updatedAt,
+  await LIB.put({ id: d.id, title: d.title, abc: d.abc, bpm: d.bpm, folder: d.folder || "", photos, updatedAt: d.updatedAt,
     drive: { json: remote.id, photos: d.photoIds || [], syncedAt: d.updatedAt } });
 }
 // API keys live in one keys.json in Drive's hidden app folder; the newer side wins, so Save and Forget carry across devices.
@@ -2574,10 +2762,10 @@ async function syncDrive(){
     }
     for (const r of remote.values()) await pullPiece(r, null);
     store.set("gLast", Date.now());
-    if (SH.pieceId){ const p = await LIB.get(SH.pieceId); if (p && !p.deleted && p.abc !== $("shAbc").value){ await setAbc(p.abc, false); showPhotos((p.photos || []).map(asPhoto)); } }
+    if (SH.pieceId && !$("shPieceV").hidden){ const p = await LIB.get(SH.pieceId); if (p && !p.deleted && p.abc !== $("shAbc").value && !SH.playing){ showPhotos((p.photos || []).map(asPhoto)); await setAbc(p.abc, false); pieceHeader(p); } }
   } catch (e) {
     SH.syncMsg = e.signin ? "" : "Sync failed: " + (e.message || "network error") + ". Your pieces are safe on this device.";
-  } finally { G.busy = false; await renderLib(); renderSync(); }
+  } finally { G.busy = false; if (!$("shLibV").hidden) await renderLib(); renderSync(); }
 }
 let driveT = 0;
 function driveSoon(){ clearTimeout(driveT); driveT = setTimeout(syncDrive, 800); }
@@ -2587,7 +2775,8 @@ function renderSync(){
   $("shSyncState").textContent = (SH.keyMsg ? SH.keyMsg + " " : "") + (SH.syncMsg || (!on ? "Saved on this device only." : G.busy ? "Syncing with Google Drive…" :
     !tok ? "Google Drive sign-in has expired. Tap Sync now to reconnect." : last ? `Synced with Google Drive ${ago(last)}.` : "Connected to Google Drive."));
   $("shSyncState").classList.toggle("bad", !!(SH.syncMsg || SH.keyMsg));
-  $("shSyncBtn").textContent = on ? "Sync now" : "Connect Google Drive";
+  $("shSyncBtn").textContent = on && tok ? "Sync now" : "Sign in with Google";
+  $("shLibSync").textContent = !on ? "On this device only" : G.busy ? "Syncing…" : SH.syncMsg ? "Sync problem, see settings" : !tok ? "Google sign-in expired" : last ? "Synced " + ago(last) : "";
   $("shSyncBtn").disabled = G.busy || !hasId;
   $("shSyncOff").hidden = !on;
   $("shGNote").hidden = hasId;
@@ -2614,11 +2803,67 @@ seg($("shSound"), ["violin", "piano"], SH.sound, v => { SH.sound = v; store.set(
 seg($("shClick"), ["off", "count", "on", "only"], SH.click, v => { SH.click = v; store.set("shClick", v); restartSheet(); },
   v => ({ off: "Off", count: "Count in", on: "On", only: "Clicks only" })[v]);
 function clearHl(){ $("shPaper").querySelectorAll(".hl").forEach(el => el.classList.remove("hl")); }
+const playLabel = t => { $("shPlay").textContent = t; $("shFsPlay").textContent = t; };
 function stopSheet(){
   if (SH.synth) try { SH.synth.stop(); } catch (e) {}
   if (SH.timer) try { SH.timer.stop(); } catch (e) {}
-  SH.synth = null; SH.timer = null; SH.playing = false; clearHl();
-  $("shPlay").textContent = "Play";
+  SH.synth = null; SH.timer = null; SH.playing = false; SH.curLine = -1; clearHl();
+  playLabel("Play");
+}
+
+// Where to start: tap a note. Notes are walked in the order they are written (first voice of the first staff).
+function eachNote(tune, fn){
+  for (const l of tune.lines || []) for (const st of (l.staff || []).slice(0, 1)) for (const el of (st.voices && st.voices[0]) || []) if (fn(el) === false) return;
+}
+function setStart(el){
+  if (!el || (el.el_type !== "note") || el.startChar == null) return;
+  SH.start = SH.start && SH.start.char === el.startChar ? null : { char: el.startChar };   // tapping the same note again clears it
+  markStart();
+  if (SH.playing){ stopSheet(); playSheet(); }
+}
+function markStart(){
+  $("shPaper").querySelectorAll(".shstart").forEach(e => e.classList.remove("shstart"));
+  let bar = 1, seen = false, prevBar = false, hit = null;
+  if (SH.start && SH.tune) eachNote(SH.tune, el => {
+    if (el.startChar >= SH.start.char && el.el_type === "note"){ hit = el; return false; }
+    if (el.el_type === "bar" && seen && !prevBar) bar++;   // ":|" then "|:" is one bar line
+    if (el.el_type === "note") seen = true;
+    prevBar = el.el_type === "bar";
+  });
+  if (hit && hit.abselem) (hit.abselem.elemset || []).forEach(e => e.classList.add("shstart"));
+  if (!hit) SH.start = null;
+  $("shStartNote").innerHTML = hit ? `Playing starts at bar ${bar}, at the green note. <button class="linkbtn" id="shFromTop">Start from the beginning</button>` :
+    "Tap any note to start playing from there.";
+}
+$("shStartNote").addEventListener("click", e => { if (e.target.id === "shFromTop"){ SH.start = null; markStart(); if (SH.playing){ stopSheet(); playSheet(); } } });
+// To start part-way through, the audio comes from a copy of the tune cut at the start of that bar (keeping the header and any
+// later key or meter changes), so the count-in still works; highlights are mapped back onto the full drawing by text position.
+function sliceAbc(abc, char){
+  const k = /^K:.*$/m.exec(abc); if (!k) return null;
+  const hEnd = k.index + k[0].length + 1;
+  let i = char;
+  while (i > hEnd && abc[i - 1] !== "|" && abc[i - 1] !== "\n" && !(abc[i - 1] === ":" && abc[i - 2] === "|")) i--;
+  while (/[0-9]/.test(abc[i] || "") && abc[i - 1] === "|") i++;   // "|2" volta numbers
+  if (i <= hEnd) return null;
+  const fields = abc.slice(hEnd, i).split("\n").filter(l => /^[MLK]:/.test(l));
+  const head = abc.slice(0, hEnd) + (fields.length ? fields.join("\n") + "\n" : "");
+  return { abc: head + abc.slice(i), from: i };
+}
+// Pairs each note of the cut copy with the drawn note it came from, by order (text positions can differ by a space).
+function noteMap(full, cut, from){
+  const a = [], b = [], m = new Map();
+  eachNote(full, el => { if (el.el_type === "note" && el.startChar >= from) a.push(el); });
+  eachNote(cut, el => { if (el.el_type === "note") b.push(el); });
+  b.forEach((el, k) => { if (a[k] && a[k].abselem) m.set(el.startChar, a[k].abselem.elemset || []); });
+  return m;
+}
+// Follow the music: in full screen turn to the page holding the current line; otherwise keep it in view.
+function follow(el){
+  const m = /\babcjs-l(\d+)\b/.exec(el.getAttribute("class") || ""); if (!m) return;
+  const line = +m[1]; if (line === SH.curLine) return; SH.curLine = line;
+  if (SH.full){ const pg = SH.linePage[line]; if (pg != null && pg !== SH.page) showPage(pg); return; }
+  const r = el.getBoundingClientRect(), bar = document.querySelector(".shplay").getBoundingClientRect().top;
+  if (r.top < 70 || r.bottom > bar - 10) window.scrollBy({ top: r.top - Math.min(140, innerHeight * 0.25), behavior: "smooth" });
 }
 let shRestartT = 0;
 function restartSheet(){
@@ -2637,28 +2882,99 @@ async function playSheet(){
     if (mode === "count") opts.drumOff = true;
   }
   if (mode === "only") opts.sequenceCallback = tracks => tracks.forEach(t => t.forEach(ev => { if (ev.cmd === "note" && ev.instrument !== 128) ev.volume = 0; }));
+  let play = tune, map = null;
+  if (SH.start){
+    const cut = sliceAbc($("shAbc").value, SH.start.char);
+    let host = $("shCut"); if (!host){ host = document.createElement("div"); host.id = "shCut"; host.style.cssText = "position:absolute;left:-10000px;top:0;width:800px;visibility:hidden"; document.body.appendChild(host); }
+    const t2 = cut && A.renderAbc(host, cut.abc, {})[0];
+    if (t2 && t2.lines && t2.lines.some(l => l.staff)){ play = t2; map = noteMap(tune, t2, cut.from); }
+  }
   const synth = new A.synth.CreateSynth();
   SH.synth = synth; SH.playing = true;
-  $("shPlay").textContent = "Loading sounds…";
+  playLabel("Loading…");
   try {
-    await synth.init({ visualObj: tune, audioContext: c, millisecondsPerMeasure: tune.millisecondsPerMeasure(SH.bpm), options: opts });
+    await synth.init({ visualObj: play, audioContext: c, millisecondsPerMeasure: play.millisecondsPerMeasure(SH.bpm), options: opts });
     await synth.prime();
   } catch (err) {
     if (SH.synth === synth){ stopSheet(); $("shPlayNote").textContent = "Couldn't load the instrument sounds. They download the first time you play, so check your internet connection."; }
     return;
   }
   if (SH.synth !== synth) return;   // stopped while loading
-  SH.timer = new A.TimingCallbacks(tune, { qpm: SH.bpm, extraMeasuresAtBeginning: intro, eventCallback: ev => {
-    clearHl();
-    if (ev && ev.elements) ev.elements.forEach(set => set.forEach(el => el.classList.add("hl")));
+  SH.timer = new A.TimingCallbacks(play, { qpm: SH.bpm, extraMeasuresAtBeginning: intro, eventCallback: ev => {
+    clearHl(); if (!ev) return;
+    const els = map ? (ev.startCharArray || []).flatMap(ch => map.get(ch) || []) : (ev.elements || []).flat();
+    els.forEach(el => el.classList.add("hl"));
+    if (els[0]) follow(els[0]);
   } });
   synth.start(); SH.timer.start();
-  $("shPlay").textContent = "Stop";
+  playLabel("Stop");
 }
-$("shPlay").addEventListener("click", () => { if (SH.playing) stopSheet(); else playSheet(); });
+const togglePlay = () => { if (SH.playing) stopSheet(); else playSheet(); };
+$("shPlay").addEventListener("click", togglePlay);
+$("shFsPlay").addEventListener("click", togglePlay);
 $("shBpm").addEventListener("input", e => { setShBpm(+e.target.value); restartSheet(); });
-$("shDown").addEventListener("click", () => { setShBpm(SH.bpm - 2); restartSheet(); });
-$("shUp").addEventListener("click", () => { setShBpm(SH.bpm + 2); restartSheet(); });
+[["shDown", -2], ["shUpBpm", 2], ["shFsDown", -2], ["shFsUp", 2]].forEach(([id, d]) => $(id).addEventListener("click", () => { setShBpm(SH.bpm + d); restartSheet(); }));
+
+// Full screen: the notation fills the screen and is cut into pages that fit it; playing turns them, and so do the arrows or a swipe.
+// iPhone Safari can't make a page element full screen, so the stage simply covers the app; elsewhere the browser's full screen is used too.
+function paginate(){
+  const paper = $("shPaper"), box = paper.getBoundingClientRect(), H = paper.clientHeight, top0 = paper.scrollTop, lines = new Map();
+  paper.querySelectorAll("#shSvg svg [class*='abcjs-l']").forEach(el => {
+    const m = /\babcjs-l(\d+)\b/.exec(el.getAttribute("class") || ""); if (!m) return;
+    const r = el.getBoundingClientRect(); if (!r.width && !r.height) return;
+    const t = r.top - box.top + top0, b = r.bottom - box.top + top0, L = lines.get(+m[1]);
+    if (!L) lines.set(+m[1], { t, b }); else { L.t = Math.min(L.t, t); L.b = Math.max(L.b, b); }
+  });
+  SH.pages = [0]; SH.linePage = {};
+  [...lines.keys()].sort((a, b) => a - b).forEach(n => {
+    const L = lines.get(n), start = SH.pages[SH.pages.length - 1];
+    if (L.b - start > H - 12 && L.t - 10 > start) SH.pages.push(L.t - 10);
+    SH.linePage[n] = SH.pages.length - 1;
+  });
+  showPage(Math.min(SH.page, SH.pages.length - 1));
+}
+function showPage(k){
+  SH.page = Math.max(0, Math.min(k, SH.pages.length - 1));
+  const paper = $("shPaper"), next = SH.pages[SH.page + 1];
+  paper.scrollTop = SH.pages[SH.page];
+  $("shMask").hidden = next == null; if (next != null) $("shMask").style.top = next + "px";
+  $("shPageNo").textContent = (SH.page + 1) + "/" + SH.pages.length;
+  $("shPrev").disabled = SH.page === 0; $("shNext").disabled = SH.page >= SH.pages.length - 1;
+}
+async function enterFull(){
+  stopSheet(); SH.full = true; SH.page = 0;
+  $("shStage").classList.add("full"); document.body.classList.add("shfull");
+  const st = $("shStage");
+  if (st.requestFullscreen && !/iPhone|iPod/.test(navigator.userAgent)) try { await st.requestFullscreen(); } catch (e) {}
+  await renderSheet(false);
+}
+async function exitFull(){
+  if (!SH.full) return;
+  SH.full = false; stopSheet();
+  $("shStage").classList.remove("full"); document.body.classList.remove("shfull");
+  $("shPaper").scrollTop = 0;
+  if (document.fullscreenElement) try { await document.exitFullscreen(); } catch (e) {}
+  await renderSheet(false);
+}
+$("shFull").addEventListener("click", enterFull);
+$("shFsExit").addEventListener("click", exitFull);
+document.addEventListener("fullscreenchange", () => { if (!document.fullscreenElement && SH.full) exitFull(); });
+$("shPrev").addEventListener("click", () => showPage(SH.page - 1));
+$("shNext").addEventListener("click", () => showPage(SH.page + 1));
+let swX = null, swY = 0;
+$("shPaper").addEventListener("touchstart", e => { if (SH.full){ swX = e.touches[0].clientX; swY = e.touches[0].clientY; } }, { passive: true });
+$("shPaper").addEventListener("touchend", e => {
+  if (swX == null) return;
+  const dx = e.changedTouches[0].clientX - swX, dy = e.changedTouches[0].clientY - swY; swX = null;
+  if (Math.abs(dx) > 60 && Math.abs(dx) > 2 * Math.abs(dy)) showPage(SH.page + (dx < 0 ? 1 : -1));
+}, { passive: true });
+document.addEventListener("keydown", e => {
+  if (!SH.full) return;
+  if (e.key === "Escape") exitFull();
+  else if (e.key === "ArrowRight" || e.key === "PageDown") showPage(SH.page + 1);
+  else if (e.key === "ArrowLeft" || e.key === "PageUp") showPage(SH.page - 1);
+  else if (e.key === " "){ e.preventDefault(); togglePlay(); }
+});
 setShBpm(SH.bpm);
 
 $("shToMetro").addEventListener("click", () => {
@@ -2685,20 +3001,25 @@ async function sheetOpen(){
   $("shGState").textContent = store.get("gClient", "") ? "· saved" : GOOGLE_CLIENT_ID ? "· built in" : "· not set";
   renderSync();
   try { await migrateLib(); } catch (e) {}
-  const id = store.get("shPiece", null), p = id ? await LIB.get(id).catch(() => null) : null;
-  if (p && !p.deleted){ SH.pieceId = id; showPhotos((p.photos || []).map(asPhoto)); }
-  $("shAbc").value = store.get("shAbc", "");
-  await renderSheet(false);
-  await renderLib();
+  if (!store.get("shSetup", false) && !hasAnyKey()) setupMode(false);
+  else if (SH.fromGoogle) { store.set("shSetup", true); SH.returnTo = "lib"; setupMode(true); }
+  else {
+    store.set("shSetup", true);
+    const id = store.get("shPiece", null);
+    if (!(store.get("shView", "lib") === "piece" && id && await openPiece(id).catch(() => false))) shView("lib");
+  }
   syncDrive();
 }
 $("t-sheet").addEventListener("click", sheetOpen);
 let shResizeT = 0;
 window.addEventListener("resize", () => {
   clearTimeout(shResizeT);
-  shResizeT = setTimeout(() => { if (SH.tune && !SH.playing && !$("p-sheet").hidden && Math.abs($("shPaper").clientWidth - 18 - SH.width) > 40) renderSheet(false); }, 250);
+  shResizeT = setTimeout(() => {
+    if (!SH.tune || SH.playing || $("p-sheet").hidden || $("shPieceV").hidden) return;
+    if (Math.abs($("shPaper").clientWidth - 18 - SH.width) > 40) renderSheet(false); else if (SH.full) paginate();
+  }, 250);
 });
-if (takeGoogleToken()) showTab("t-sheet");
+if (takeGoogleToken()){ SH.fromGoogle = true; showTab("t-sheet"); }
 if (!$("p-sheet").hidden) sheetOpen();
 
 /* ---------- Today's plan ---------- */
