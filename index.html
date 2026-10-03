@@ -516,6 +516,7 @@ details>summary:hover{color:var(--ink)}
         <div class="row">
           <select id="shLib" aria-label="Saved pieces"></select>
           <button class="btn" id="shSave">Save piece</button>
+          <button class="btn" id="shDel" hidden>Delete</button>
         </div>
       </div>
       <div class="paper" id="shPaper"><div class="empty">Notation appears here once a photo has been read, or when you open a saved piece.</div></div>
@@ -524,6 +525,21 @@ details>summary:hover{color:var(--ink)}
         <summary class="small">Edit the notes as text (ABC notation)</summary>
         <textarea id="shAbc" spellcheck="false" rows="10" style="margin-top:10px;font:13px/1.5 var(--f-mono)" aria-label="ABC notation"></textarea>
         <p class="small muted" style="margin:6px 0 0">A misread note is usually one letter to fix: <span class="mono">c</span> is the C in the middle of the staff, <span class="mono">C</span> an octave lower, <span class="mono">^</span> sharp, <span class="mono">_</span> flat, <span class="mono">=</span> natural, and a number after a note sets its length.</p>
+      </details>
+      <div class="row" style="justify-content:space-between;border-top:1px solid var(--line);padding-top:12px">
+        <span class="small muted" id="shSyncState" style="flex:1 1 200px">Saved on this device only.</span>
+        <span class="row"><button class="btn" id="shSyncBtn">Connect Google Drive</button><button class="btn" id="shSyncOff" hidden>Disconnect</button></span>
+      </div>
+      <details id="shGBox">
+        <summary class="small">Google client ID <span class="muted" id="shGState"></span></summary>
+        <div class="stack" style="gap:8px;margin-top:10px">
+          <div class="row">
+            <input type="text" id="shGClient" placeholder="….apps.googleusercontent.com" autocomplete="off" spellcheck="false" style="flex:1 1 220px;min-width:0" aria-label="Google OAuth client ID">
+            <button class="btn" id="shGSave">Save</button>
+          </div>
+          <p class="small muted" style="margin:0" id="shGNote">Drive sync needs the OAuth client ID from this app's Google Cloud project (see the README). It isn't a secret.</p>
+          <p class="small muted" style="margin:0">Pieces sync to a "Violin Practice Room" folder in your Drive. The app can only see files it created there.</p>
+        </div>
       </details>
     </div>
     <div class="panel stack">
@@ -2062,7 +2078,7 @@ function loadAbcjs(){
   abcLoad = tryUrl(ABCJS_LOCAL).catch(() => tryUrl(ABCJS_CDN)).catch(e => { abcLoad = null; throw e; });
   return abcLoad;
 }
-const SH = { photos: [], tune: null, synth: null, timer: null, playing: false, bpm: store.get("shBpm", 90),
+const SH = { photos: [], pieceId: null, syncMsg: "", tune: null, synth: null, timer: null, playing: false, bpm: store.get("shBpm", 90),
   sound: store.get("shSound", "violin"), click: store.get("shClick", "count"), opened: false };
 function shStatus(text, bad){ const n = $("shStatus"); n.textContent = text; n.classList.toggle("bad", !!bad); }
 
@@ -2086,10 +2102,7 @@ $("shFile").addEventListener("change", async e => {
   shStatus("Preparing the photos…");
   const photos = [];
   for (const f of files){ try { photos.push(await shrinkPhoto(f, 2400)); } catch (err) {} }
-  SH.photos = photos;
-  $("shThumbs").innerHTML = photos.map((p, i) => `<img src="${p.url}" alt="Page ${i + 1}">`).join("");
-  $("shPhotoInfo").textContent = photos.length ? photos.length + (photos.length === 1 ? " page" : " pages") : "";
-  $("shRead").disabled = !photos.length;
+  SH.pieceId = null; store.set("shPiece", null); showPhotos(photos); renderLib();
   if (!photos.length) shStatus("Those files couldn't be opened as pictures. Try a JPEG or PNG.", true);
   else shStatus(store.get("shKey", "") ? "Ready. Press \u201cRead the notes\u201d." : "Ready. Add your Claude API key below, then press \u201cRead the notes\u201d.");
 });
@@ -2141,9 +2154,9 @@ $("shRead").addEventListener("click", async () => {
     if (!/^K:/m.test(abc)) throw new Error("The reply didn't contain readable notation. Try again, or with a clearer photo.");
     const unsure = m ? text.slice(text.indexOf(m[0]) + m[0].length).trim() : "";
     await setAbc(abc, true);
-    $("shLib").value = "";
+    await savePiece();   // a read costs money, so the result is kept straight away
     shStatus((msg.stop_reason === "max_tokens" ? "The piece was too long to finish; the end may be missing. " : "Done. ") +
-      "Compare the notation with your photo and fix anything misread under \u201cEdit the notes as text\u201d." + (unsure ? "\n\n" + unsure : ""));
+      "Saved to your pieces. Compare the notation with your photo, fix anything misread under \u201cEdit the notes as text\u201d, then press Save piece." + (unsure ? "\n\n" + unsure : ""));
     $("shPaper").scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (err) {
     shStatus(readError(err), true);
@@ -2200,32 +2213,248 @@ $("shAbc").addEventListener("input", () => {
   shEditT = setTimeout(() => { store.set("shAbc", $("shAbc").value); renderSheet(false); }, 500);
 });
 
-// Saved pieces (this browser only)
+// Saved pieces: kept on this device in IndexedDB (notes, tempo and the original photos), optionally synced to Google Drive.
+// Each piece: { id, title, abc, bpm, photos: [JPEG data URLs], updatedAt, deleted?, drive?: { json, photos: [ids], syncedAt } }.
+// A deleted piece that was already on Drive stays as a tombstone until the next sync removes it there too.
 const tuneTitle = abc => ((abc.match(/^T:\s*(.+)$/m) || [])[1] || "Untitled").trim();
-function renderLib(sel){
-  const lib = store.get("shLib", []);
-  $("shLib").innerHTML = `<option value="">Open a piece…</option><option value="ex">Example: Minuet in G</option>` +
-    lib.map((p, i) => `<option value="${i}">${p.title.replace(/[<&]/g, c => c === "<" ? "&lt;" : "&amp;")}</option>`).join("") +
-    (lib.length ? `<option value="del">Remove the open piece from the list</option>` : "");
-  $("shLib").value = sel == null ? "" : String(sel);
+const LIB = {
+  db: null,
+  open(){
+    return this.db || (this.db = new Promise((ok, bad) => {
+      const r = indexedDB.open("vpr-sheet", 1);
+      r.onupgradeneeded = () => r.result.createObjectStore("pieces", { keyPath: "id" });
+      r.onsuccess = () => ok(r.result); r.onerror = () => bad(r.error);
+    }));
+  },
+  async run(mode, fn){
+    const db = await this.open();
+    return new Promise((ok, bad) => {
+      const t = db.transaction("pieces", mode), req = fn(t.objectStore("pieces"));
+      t.oncomplete = () => ok(req ? req.result : undefined); t.onerror = () => bad(t.error);
+    });
+  },
+  all(){ return this.run("readonly", s => s.getAll()); },
+  get(id){ return this.run("readonly", s => s.get(id)); },
+  put(p){ return this.run("readwrite", s => s.put(p)); },
+  del(id){ return this.run("readwrite", s => s.delete(id)); }
+};
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const escHtml = s => String(s).replace(/[<&"]/g, c => ({ "<": "&lt;", "&": "&amp;", '"': "&quot;" })[c]);
+// Pieces saved before the library moved to IndexedDB lived in localStorage; move them over once.
+async function migrateLib(){
+  const old = store.get("shLib", null); if (!Array.isArray(old) || !old.length) return;
+  for (const p of old) await LIB.put({ id: newId(), title: p.title, abc: p.abc, bpm: p.bpm || 90, photos: [], updatedAt: Date.now() });
+  try { localStorage.removeItem("vpr:shLib"); } catch (e) {}
+}
+async function renderLib(){
+  const lib = (await LIB.all()).filter(p => !p.deleted).sort((a, b) => a.title.localeCompare(b.title));
+  $("shLib").innerHTML = `<option value="">${lib.length ? "Open a piece…" : "No saved pieces yet"}</option><option value="ex">Example: Minuet in G</option>` +
+    lib.map(p => `<option value="${p.id}">${escHtml(p.title)}</option>`).join("");
+  $("shLib").value = SH.pieceId && lib.some(p => p.id === SH.pieceId) ? SH.pieceId : "";
+  $("shDel").hidden = !SH.pieceId;
+}
+function showPhotos(photos){
+  SH.photos = photos;
+  $("shThumbs").innerHTML = photos.map((p, i) => `<img src="${p.url}" alt="Page ${i + 1}">`).join("");
+  $("shPhotoInfo").textContent = photos.length ? photos.length + (photos.length === 1 ? " page" : " pages") : "";
+  $("shRead").disabled = !photos.length;
+}
+const asPhoto = url => ({ url, b64: url.slice(url.indexOf(",") + 1) });
+async function openPiece(id){
+  const p = await LIB.get(id); if (!p || p.deleted) return;
+  SH.pieceId = id; store.set("shPiece", id);
+  showPhotos((p.photos || []).map(asPhoto));
+  await setAbc(p.abc, true);
+  if (p.bpm) setShBpm(p.bpm);
+  renderLib();
+}
+// Saves the open piece (or a new one with the current photos) and returns it.
+async function savePiece(){
+  const abc = $("shAbc").value.trim(); if (!abc) return null;
+  const old = SH.pieceId ? await LIB.get(SH.pieceId) : null;
+  const p = old && !old.deleted ? old : { id: newId(), photos: SH.photos.map(x => x.url) };
+  Object.assign(p, { title: tuneTitle(abc), abc, bpm: SH.bpm, updatedAt: Date.now() });
+  await LIB.put(p);
+  SH.pieceId = p.id; store.set("shPiece", p.id);
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+  await renderLib(); driveSoon();
+  return p;
 }
 $("shLib").addEventListener("change", async e => {
-  const v = e.target.value, lib = store.get("shLib", []);
-  if (v === "ex"){ await setAbc(SH_EXAMPLE, true); return; }
-  if (v === "del"){
-    const t = tuneTitle($("shAbc").value), i = lib.findIndex(p => p.title === t);
-    if (i >= 0){ lib.splice(i, 1); store.set("shLib", lib); shStatus(`Removed \u201c${t}\u201d from your saved pieces.`); }
-    renderLib(); return;
-  }
-  if (v !== "" && lib[+v]){ await setAbc(lib[+v].abc, true); if (lib[+v].bpm) setShBpm(lib[+v].bpm); }
+  const v = e.target.value;
+  if (v === "ex"){ SH.pieceId = null; store.set("shPiece", null); showPhotos([]); await setAbc(SH_EXAMPLE, true); renderLib(); return; }
+  if (v) openPiece(v);
 });
-$("shSave").addEventListener("click", () => {
-  const abc = $("shAbc").value.trim(); if (!abc) return;
-  const lib = store.get("shLib", []), title = tuneTitle(abc);
-  let i = lib.findIndex(p => p.title === title);
-  if (i >= 0) lib[i] = { title, abc, bpm: SH.bpm }; else { lib.push({ title, abc, bpm: SH.bpm }); i = lib.length - 1; }
-  store.set("shLib", lib); renderLib(i);
+$("shSave").addEventListener("click", async () => {
+  if (!await savePiece()) return;
   $("shSave").textContent = "Saved"; setTimeout(() => $("shSave").textContent = "Save piece", 1500);
+});
+$("shDel").addEventListener("click", async () => {
+  const p = SH.pieceId && await LIB.get(SH.pieceId); if (!p) return;
+  if (!confirm(`Delete \u201c${p.title}\u201d${p.drive ? " here and from Google Drive" : ""}?`)) return;
+  if (p.drive) await LIB.put(Object.assign(p, { deleted: true, updatedAt: Date.now() })); else await LIB.del(p.id);
+  SH.pieceId = null; store.set("shPiece", null);
+  showPhotos([]); await setAbc("", false); await renderLib(); driveSoon();
+  shStatus(`Deleted \u201c${p.title}\u201d.`);
+});
+
+/* Google Drive sync. Sign-in is a plain OAuth redirect to Google and back (no Google script runs on this page),
+   with the drive.file scope: the app sees only the files it created, in a "Violin Practice Room" folder. */
+const GOOGLE_CLIENT_ID = "";
+const G = {
+  clientId: () => store.get("gClient", "") || GOOGLE_CLIENT_ID,
+  token: () => { const t = store.get("gToken", null); return t && t.exp > Date.now() + 60000 ? t.access : null; },
+  api: "https://www.googleapis.com/drive/v3/", up: "https://www.googleapis.com/upload/drive/v3/",
+  folderName: "Violin Practice Room", busy: false
+};
+const redirectUri = () => location.origin + location.pathname.replace(/index\.html$/, "");
+function googleSignIn(){
+  const state = newId(); store.set("gState", state);
+  location.assign("https://accounts.google.com/o/oauth2/v2/auth?" + new URLSearchParams({
+    client_id: G.clientId(), redirect_uri: redirectUri(), response_type: "token", state,
+    scope: "https://www.googleapis.com/auth/drive.file", include_granted_scopes: "true"
+  }));
+}
+// Back from Google: the token arrives in the URL fragment.
+function takeGoogleToken(){
+  if (!/[#&](access_token|error)=/.test(location.hash)) return false;
+  const q = new URLSearchParams(location.hash.slice(1));
+  history.replaceState(null, "", location.pathname + location.search);
+  const ok = q.get("state") && q.get("state") === store.get("gState", "");
+  store.set("gState", "");
+  if (ok && q.get("access_token")){
+    store.set("gToken", { access: q.get("access_token"), exp: Date.now() + (+q.get("expires_in") || 3600) * 1000 });
+    store.set("gOn", true);
+  } else SH.syncMsg = q.get("error") === "access_denied" ? "Google sign-in was cancelled." : "Google sign-in didn't complete. Try again.";
+  return true;
+}
+async function gFetch(url, opts = {}){
+  const r = await fetch(url, Object.assign({}, opts, { headers: Object.assign({ Authorization: "Bearer " + G.token() }, opts.headers || {}) }));
+  if (r.status === 401){ store.set("gToken", null); throw Object.assign(new Error("signin"), { signin: true }); }
+  if (!r.ok) throw new Error("Google Drive error " + r.status);
+  return r;
+}
+async function gFolder(){
+  let id = store.get("gFolder", "");
+  if (id){
+    const r = await gFetch(G.api + "files/" + id + "?fields=id,trashed").then(r => r.json()).catch(e => { if (e.signin) throw e; return null; });
+    if (r && !r.trashed) return id;
+  }
+  const q = `mimeType='application/vnd.google-apps.folder' and name='${G.folderName}' and trashed=false`;
+  const found = await gFetch(G.api + "files?fields=files(id)&q=" + encodeURIComponent(q)).then(r => r.json());
+  id = found.files && found.files[0] ? found.files[0].id :
+    (await gFetch(G.api + "files?fields=id", { method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: G.folderName, mimeType: "application/vnd.google-apps.folder" }) }).then(r => r.json())).id;
+  store.set("gFolder", id); return id;
+}
+// Create (no id) or update a file's metadata and contents in one multipart request.
+async function gUpload(meta, blob, id){
+  const b = "vpr" + newId(), body = new Blob([`--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n`, JSON.stringify(meta),
+    `\r\n--${b}\r\nContent-Type: ${blob.type}\r\n\r\n`, blob, `\r\n--${b}--`]);
+  const r = await gFetch(G.up + "files" + (id ? "/" + id : "") + "?uploadType=multipart&fields=id",
+    { method: id ? "PATCH" : "POST", headers: { "Content-Type": "multipart/related; boundary=" + b }, body });
+  return (await r.json()).id;
+}
+const gTrash = id => gFetch(G.api + "files/" + id, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ trashed: true }) }).catch(e => { if (e.signin) throw e; });
+const blobToDataUrl = blob => new Promise(ok => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.readAsDataURL(blob); });
+const fileStem = t => t.replace(/[\\/:*?"<>|]+/g, "").trim() || "Untitled";
+async function pushPiece(p, folder, remote){
+  if (!p.drive || !p.drive.photos || p.drive.photos.length !== (p.photos || []).length){
+    const ids = [];
+    for (let i = 0; i < (p.photos || []).length; i++){
+      const blob = await (await fetch(p.photos[i])).blob();
+      ids.push(await gUpload({ name: `${fileStem(p.title)} - page ${i + 1}.jpg`, parents: [folder], appProperties: { vprId: p.id, vprKind: "photo" } }, blob));
+    }
+    p.drive = Object.assign({}, p.drive, { photos: ids });
+  }
+  const data = { id: p.id, title: p.title, abc: p.abc, bpm: p.bpm, updatedAt: p.updatedAt, photoIds: p.drive.photos };
+  const meta = { name: fileStem(p.title) + ".json", appProperties: { vprId: p.id, vprKind: "piece", updatedAt: String(p.updatedAt) } };
+  if (!remote) meta.parents = [folder];
+  const json = await gUpload(meta, new Blob([JSON.stringify(data, null, 1)], { type: "application/json" }), remote && remote.id);
+  p.drive = Object.assign(p.drive, { json, syncedAt: p.updatedAt });
+  await LIB.put(p);
+}
+async function pullPiece(remote, local){
+  const d = await gFetch(G.api + "files/" + remote.id + "?alt=media").then(r => r.json());
+  const same = local && local.drive && JSON.stringify(local.drive.photos) === JSON.stringify(d.photoIds || []);
+  const photos = same ? local.photos : [];
+  if (!same) for (const id of d.photoIds || []){
+    try { photos.push(await blobToDataUrl(await gFetch(G.api + "files/" + id + "?alt=media").then(r => r.blob()))); } catch (e) { if (e.signin) throw e; }
+  }
+  await LIB.put({ id: d.id, title: d.title, abc: d.abc, bpm: d.bpm, photos, updatedAt: d.updatedAt,
+    drive: { json: remote.id, photos: d.photoIds || [], syncedAt: d.updatedAt } });
+}
+async function syncDrive(){
+  if (G.busy || !store.get("gOn", false) || !G.token()) return renderSync();
+  G.busy = true; SH.syncMsg = ""; renderSync();
+  try {
+    const before = store.get("gFolder", ""), folder = await gFolder();
+    // A new folder (the old one was deleted or never existed): treat every local piece as not yet uploaded, never as deleted remotely.
+    if (folder !== before) for (const p of await LIB.all()) if (p.drive){ p.drive = null; await LIB.put(p); }
+    const q = `'${folder}' in parents and trashed=false`;
+    let files = [], page = "";
+    do {
+      const r = await gFetch(G.api + "files?pageSize=1000&fields=nextPageToken,files(id,appProperties)&q=" + encodeURIComponent(q) + (page ? "&pageToken=" + page : "")).then(r => r.json());
+      files = files.concat(r.files || []); page = r.nextPageToken || "";
+    } while (page);
+    const remote = new Map(), remotePhotos = new Map();
+    for (const f of files){
+      const a = f.appProperties || {}; if (!a.vprId) continue;
+      if (a.vprKind === "piece") remote.set(a.vprId, f);
+      else (remotePhotos.get(a.vprId) || remotePhotos.set(a.vprId, []).get(a.vprId)).push(f.id);
+    }
+    for (const p of await LIB.all()){
+      const r = remote.get(p.id); remote.delete(p.id);
+      if (p.deleted){
+        if (r) await gTrash(r.id);
+        for (const id of remotePhotos.get(p.id) || []) await gTrash(id);
+        await LIB.del(p.id); continue;
+      }
+      if (!r){
+        // Gone from Drive: deleted on another device, unless it changed here since the last sync.
+        if (p.drive && p.drive.json && p.updatedAt <= p.drive.syncedAt){ await LIB.del(p.id); if (SH.pieceId === p.id) SH.pieceId = null; }
+        else { if (p.drive) p.drive = null; await pushPiece(p, folder, null); }
+        continue;
+      }
+      const rUpd = +(r.appProperties.updatedAt || 0);
+      if (p.updatedAt > rUpd) await pushPiece(p, folder, r);
+      else if (rUpd > p.updatedAt) await pullPiece(r, p);
+    }
+    for (const r of remote.values()) await pullPiece(r, null);
+    store.set("gLast", Date.now());
+    if (SH.pieceId){ const p = await LIB.get(SH.pieceId); if (p && !p.deleted && p.abc !== $("shAbc").value){ await setAbc(p.abc, false); showPhotos((p.photos || []).map(asPhoto)); } }
+  } catch (e) {
+    SH.syncMsg = e.signin ? "" : "Sync failed: " + (e.message || "network error") + ". Your pieces are safe on this device.";
+  } finally { G.busy = false; await renderLib(); renderSync(); }
+}
+let driveT = 0;
+function driveSoon(){ clearTimeout(driveT); driveT = setTimeout(syncDrive, 800); }
+function ago(t){ const s = (Date.now() - t) / 1000; return s < 60 ? "just now" : s < 3600 ? Math.round(s / 60) + " min ago" : s < 86400 ? Math.round(s / 3600) + " h ago" : new Date(t).toLocaleDateString(); }
+function renderSync(){
+  const on = store.get("gOn", false), tok = G.token(), last = store.get("gLast", 0), hasId = !!G.clientId();
+  $("shSyncState").textContent = SH.syncMsg || (!on ? "Saved on this device only." : G.busy ? "Syncing with Google Drive…" :
+    !tok ? "Google Drive sign-in has expired. Tap Sync now to reconnect." : last ? `Synced with Google Drive ${ago(last)}.` : "Connected to Google Drive.");
+  $("shSyncState").classList.toggle("bad", !!SH.syncMsg);
+  $("shSyncBtn").textContent = on ? "Sync now" : "Connect Google Drive";
+  $("shSyncBtn").disabled = G.busy || !hasId;
+  $("shSyncOff").hidden = !on;
+  $("shGNote").hidden = hasId;
+}
+$("shSyncBtn").addEventListener("click", () => {
+  if (!G.clientId()){ document.getElementById("shGBox").open = true; return; }
+  if (!G.token()) googleSignIn(); else syncDrive();
+});
+$("shSyncOff").addEventListener("click", async () => {
+  const t = store.get("gToken", null);
+  if (t) fetch("https://oauth2.googleapis.com/revoke?token=" + encodeURIComponent(t.access), { method: "POST", mode: "no-cors" }).catch(() => {});
+  ["gToken", "gFolder", "gLast"].forEach(k => store.set(k, null)); store.set("gOn", false); SH.syncMsg = "";
+  // Pieces stay here; forget their Drive links so a later connection uploads them afresh.
+  for (const p of await LIB.all()){ if (p.deleted) await LIB.del(p.id); else if (p.drive){ p.drive = null; await LIB.put(p); } }
+  renderSync();
+});
+$("shGSave").addEventListener("click", () => {
+  const v = $("shGClient").value.trim(); if (!v) return;
+  store.set("gClient", v); $("shGClient").value = ""; $("shGState").textContent = "· saved"; renderSync();
 });
 
 // Playback: abcjs synth with General MIDI samples; the metronome is abcjs's drum track (wood block, accent on beat 1).
@@ -2299,11 +2528,17 @@ $("shMidi").addEventListener("click", () => {
 });
 
 // abcjs loads the first time the tab opens, not on app start.
-function sheetOpen(){
+async function sheetOpen(){
   if (SH.opened) return; SH.opened = true;
-  renderLib();
+  $("shGState").textContent = store.get("gClient", "") ? "· saved" : GOOGLE_CLIENT_ID ? "· built in" : "· not set";
+  renderSync();
+  try { await migrateLib(); } catch (e) {}
+  const id = store.get("shPiece", null), p = id ? await LIB.get(id).catch(() => null) : null;
+  if (p && !p.deleted){ SH.pieceId = id; showPhotos((p.photos || []).map(asPhoto)); }
   $("shAbc").value = store.get("shAbc", "");
-  renderSheet(false);
+  await renderSheet(false);
+  await renderLib();
+  syncDrive();
 }
 $("t-sheet").addEventListener("click", sheetOpen);
 let shResizeT = 0;
@@ -2311,6 +2546,7 @@ window.addEventListener("resize", () => {
   clearTimeout(shResizeT);
   shResizeT = setTimeout(() => { if (SH.tune && !SH.playing && !$("p-sheet").hidden && Math.abs($("shPaper").clientWidth - 18 - SH.width) > 40) renderSheet(false); }, 250);
 });
+if (takeGoogleToken()) showTab("t-sheet");
 if (!$("p-sheet").hidden) sheetOpen();
 
 /* ---------- Today's plan ---------- */
