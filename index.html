@@ -291,6 +291,17 @@ form .field>span{font-size:13px;color:var(--muted)}
 .paper svg{display:block}
 .paper .shstart{fill:var(--good);color:var(--good)}
 .paper .abcjs-note.hl,.paper .abcjs-rest.hl{fill:var(--accent);color:var(--accent)}
+.tkvid{width:100%;max-height:52vh;background:#000;border-radius:8px;object-fit:contain;display:block}
+.tklist .tk{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.tklist .tk:last-child{border-bottom:0}
+.tklist .tk .meta{font-size:12.5px;color:var(--muted)}
+.tklist .tk .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.tklist .tk .acts button{font-size:12.5px;padding:5px 9px}
+.tkpair{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
+.tkpair figure{margin:0}.tkpair figcaption{font-size:12px;color:var(--muted);margin-top:4px}
+.paper .sc-good{fill:var(--good);color:var(--good)}
+.paper .sc-warn{fill:var(--warn);color:var(--warn)}
+.paper .sc-bad{fill:var(--bad);color:var(--bad)}
 .shhead{display:flex;align-items:center;gap:10px}
 .btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
 button.btn.icon,summary.btn.icon{padding:8px;min-width:40px;min-height:40px;justify-content:center;font-size:18px}
@@ -682,6 +693,8 @@ details>summary:hover{color:var(--ink)}
         <span class="small muted" id="shLoopInfo"></span>
         <button class="btn" id="shClean" hidden>Clean, +5 bpm</button>
       </div>
+      <label class="row small" style="gap:8px"><input type="checkbox" id="shScore"> Score my intonation <span class="muted">(listens through the microphone; the melody goes quiet so it only hears you)</span></label>
+      <div class="note" id="shScoreNote" hidden></div>
       <div class="shplay">
         <div class="row" style="gap:10px;flex-wrap:nowrap">
           <button class="btn primary big" id="shPlay" disabled>Play</button>
@@ -702,6 +715,20 @@ details>summary:hover{color:var(--ink)}
         </details>
       </div>
       <div class="panel" id="shProg" hidden></div>
+      <div class="panel stack" id="tkBox" hidden>
+        <div class="row" style="justify-content:space-between"><h3 style="margin:0">Recordings</h3><button class="btn" id="tkRec">Record a take</button></div>
+        <label class="row small" style="gap:8px"><input type="checkbox" id="tkAuto"> Delete new takes after 1 day <span class="muted">(tap Keep on any you want to hold on to)</span></label>
+        <div class="stack" id="tkLive" hidden style="gap:10px">
+          <video id="tkCam" class="tkvid" playsinline muted autoplay></video>
+          <div class="row"><button class="btn primary" id="tkStop">Stop and save</button><span class="mono" id="tkTime">0:00</span><span style="flex:1"></span><button class="btn" id="tkCancel">Cancel</button></div>
+        </div>
+        <div id="tkList" class="tklist"></div>
+        <div class="stack" id="tkView" hidden style="gap:10px">
+          <div class="tkpair" id="tkVids"></div>
+          <div class="row"><button class="btn primary" id="tkPlay">Play</button><span class="small muted" id="tkViewNote"></span></div>
+        </div>
+        <div class="small muted" id="tkNote"></div>
+      </div>
       <details id="shAbcBox">
         <summary class="small">Edit the notes as text (ABC notation)</summary>
         <textarea id="shAbc" spellcheck="false" rows="10" style="margin-top:10px;font:13px/1.5 var(--f-mono)" aria-label="ABC notation"></textarea>
@@ -748,7 +775,8 @@ details>summary:hover{color:var(--ink)}
     </div>
     <div class="panel stack">
       <div class="row">
-        <label class="btn primary" for="fileIn">Open a recording<input type="file" id="fileIn" accept="audio/*,video/*" hidden></label>
+        <button class="btn primary" id="lbRec">Record</button>
+        <label class="btn" for="fileIn">Open a recording<input type="file" id="fileIn" accept="audio/*,video/*" hidden></label>
         <button class="btn" id="sampleBtn">Load sample scale</button>
         <span class="small muted" id="fileName">Showing the sample: a D major scale at 72 bpm with a few notes out of tune, rushing a little.</span>
       </div>
@@ -1314,20 +1342,40 @@ function loadBuffer(channel, sr, url, label){
   $("fileName").textContent = label;
   summarize(); drawPlot(); checkRhythm();
 }
-$("fileIn").addEventListener("change", async e => {
-  const file = e.target.files[0]; if (!file) return;
-  $("fileName").textContent = "Analysing " + file.name + "…";
+async function analyseRecording(file, name){
+  $("fileName").textContent = "Analysing " + name + "…";
   try{
     const ab = await file.arrayBuffer();
     const c = audio(), buf = await c.decodeAudioData(ab);
     let ch = buf.getChannelData(0);
     if (buf.numberOfChannels > 1){ const r = buf.getChannelData(1), m = new Float32Array(ch.length); for (let i = 0; i < ch.length; i++) m[i] = (ch[i] + r[i]) / 2; ch = m; }
     setTimeout(() => loadBuffer(ch, buf.sampleRate, URL.createObjectURL(file),
-      file.name + (buf.duration > 300 ? " (first 5 minutes analysed)" : "")), 20);
+      name + (buf.duration > 300 ? " (first 5 minutes analysed)" : "")), 20);
   }catch(err){
     $("fileName").textContent = "Couldn't read that file. Try an .m4a, .mp3 or .wav recording.";
   }
+}
+$("fileIn").addEventListener("change", async e => {
+  const file = e.target.files[0]; if (!file) return;
+  await analyseRecording(file, file.name);
   e.target.value = "";
+});
+// Record straight into Listen back (sound only), then analyse it.
+let lbRec = null;
+$("lbRec").addEventListener("click", async () => {
+  if (lbRec){ lbRec.stop(); return; }
+  try {
+    if (navigator.audioSession) navigator.audioSession.type = "play-and-record";
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    const parts = [], mr = new MediaRecorder(stream);
+    mr.ondataavailable = e => { if (e.data.size) parts.push(e.data); };
+    mr.onstop = () => {
+      stream.getTracks().forEach(t => t.stop()); lbRec = null; $("lbRec").textContent = "Record";
+      if (navigator.audioSession) navigator.audioSession.type = "playback";
+      analyseRecording(new Blob(parts, { type: mr.mimeType }), "Recording at " + new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
+    };
+    mr.start(); lbRec = mr; $("lbRec").textContent = "Stop"; $("fileName").textContent = "Recording… press Stop when you're done.";
+  } catch (e) { $("fileName").textContent = location.protocol === "https:" || location.hostname === "localhost" ? "The microphone is blocked. Allow it for this site, then try again." : MIC_BLOCKED; }
 });
 // Synthesised sample: D major scale, some notes deliberately off (sharp F♯ and C♯ are classic 3rd-finger and high-2 habits)
 function sampleScale(){
@@ -2267,11 +2315,11 @@ function loadAbcjs(){
 }
 const SH = { photos: [], pieceId: null, syncMsg: "", tune: null, synth: null, timer: null, playing: false, bpm: store.get("shBpm", 90),
   sound: store.get("shSound", "violin"), click: store.get("shClick", "count"), opened: false,
-  folder: store.get("shFolder", ""), start: null, startBar: 1, loop: store.get("shLoop", 0), reps: 0, full: false, pages: [0], linePage: {}, page: 0, curLine: -1, settings: false, returnTo: "lib" };
+  folder: store.get("shFolder", ""), start: null, startBar: 1, loop: store.get("shLoop", 0), score: store.get("shScoreOn", false), mic: null, sc: null, reps: 0, full: false, pages: [0], linePage: {}, page: 0, curLine: -1, settings: false, returnTo: "lib" };
 
 // Screens: "setup" (first run, and settings later), "lib" (folders and pieces), "scan" (new photos), "piece" (notation and player).
 function shView(v){
-  if (v !== "piece"){ stopSheet(); if (SH.full) exitFull(); }
+  if (v !== "piece"){ stopSheet(); if (SH.full) exitFull(); if (TK.rec) TK.rec.stop(); }
   ["setup", "lib", "scan", "piece"].forEach(k => { $("sh" + k[0].toUpperCase() + k.slice(1) + "V").hidden = k !== v; });
   if (v === "lib" || v === "piece") store.set("shView", v);
   $("shMenu").open = false;
@@ -2554,15 +2602,15 @@ const LIB = {
   db: null,
   open(){
     return this.db || (this.db = new Promise((ok, bad) => {
-      const r = indexedDB.open("vpr-sheet", 1);
-      r.onupgradeneeded = () => r.result.createObjectStore("pieces", { keyPath: "id" });
+      const r = indexedDB.open("vpr-sheet", 2);
+      r.onupgradeneeded = () => ["pieces", "takes"].forEach(n => { if (!r.result.objectStoreNames.contains(n)) r.result.createObjectStore(n, { keyPath: "id" }); });
       r.onsuccess = () => ok(r.result); r.onerror = () => bad(r.error);
     }));
   },
-  async run(mode, fn){
+  async run(mode, fn, name = "pieces"){
     const db = await this.open();
     return new Promise((ok, bad) => {
-      const t = db.transaction("pieces", mode), req = fn(t.objectStore("pieces"));
+      const t = db.transaction(name, mode), req = fn(t.objectStore(name));
       t.oncomplete = () => ok(req ? req.result : undefined); t.onerror = () => bad(t.error);
     });
   },
@@ -2570,6 +2618,14 @@ const LIB = {
   get(id){ return this.run("readonly", s => s.get(id)); },
   put(p){ return this.run("readwrite", s => s.put(p)); },
   del(id){ return this.run("readwrite", s => s.delete(id)); }
+};
+// Recorded takes: { id, pieceId, title, date, bpm, mime, size, dur, blob (until it is in Drive), driveId, deleted,
+//   exp (when it deletes itself; 0 = keep), expDirty (exp changed here, not yet in Drive) }
+const TAKES = {
+  all(){ return LIB.run("readonly", s => s.getAll(), "takes"); },
+  get(id){ return LIB.run("readonly", s => s.get(id), "takes"); },
+  put(t){ return LIB.run("readwrite", s => s.put(t), "takes"); },
+  del(id){ return LIB.run("readwrite", s => s.delete(id), "takes"); }
 };
 const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 const escHtml = s => String(s).replace(/[<&"]/g, c => ({ "<": "&lt;", "&": "&amp;", '"': "&quot;" })[c]);
@@ -2626,11 +2682,11 @@ async function openPiece(id){
   shView("piece"); $("shReadNote").hidden = true; $("shPThumbs").hidden = true; $("shAbcBox").open = false;
   await setAbc(p.abc, true);
   if (p.bpm) setShBpm(p.bpm);
-  pieceHeader(p); renderRep(); ensureRep(p);
+  pieceHeader(p); renderRep(); ensureRep(p); TK.sel = []; renderTakes();
   return true;
 }
 async function openExample(){
-  SH.pieceId = null; store.set("shPiece", null); SH.start = null; showPhotos([]); shOpenId = null; renderRep();
+  SH.pieceId = null; store.set("shPiece", null); SH.start = null; showPhotos([]); shOpenId = null; renderRep(); renderTakes();
   shView("piece"); $("shReadNote").hidden = true; $("shAbcBox").open = false;
   await setAbc(SH_EXAMPLE, true); pieceHeader(null);
 }
@@ -2896,6 +2952,7 @@ async function syncDrive(){
       files = files.concat(r.files || []); page = r.nextPageToken || "";
     } while (page);
     await syncProgress(folder, files.find(f => (f.appProperties || {}).vprKind === "progress"));
+    await syncTakes(folder);
     const remote = new Map(), remotePhotos = new Map();
     for (const f of files){
       const a = f.appProperties || {}; if (!a.vprId) continue;
@@ -2974,6 +3031,176 @@ $("shGSave").addEventListener("click", () => {
   store.set("gClient", v); $("shGClient").value = ""; $("shGState").textContent = "· saved"; renderSync();
 });
 
+/* Recorded takes of a piece: video from the front camera at 720p, kept on this device until it is uploaded to
+   "Violin Practice Room/Recordings/<piece>/" in Google Drive, then played back from Drive. Any two can be watched side by side. */
+const TK = { rec: null, stream: null, t0: 0, tick: 0, sel: [], busy: false, pct: {} };
+const tkExt = mime => /mp4/.test(mime) ? "mp4" : "webm";
+const tkDur = s => Math.floor(s / 60) + ":" + String(Math.round(s % 60)).padStart(2, "0");
+// Takes marked to delete themselves go once their day is up, here and (at the next sync) in Drive.
+async function expireTakes(){
+  let n = 0;
+  for (const t of await TAKES.all()) if (!t.deleted && t.exp && t.exp <= Date.now()){
+    n++; if (t.driveId){ t.deleted = true; delete t.blob; await TAKES.put(t); } else await TAKES.del(t.id);
+  }
+  if (n) driveSoon();
+}
+const tkLeft = exp => { const h = Math.max(1, Math.round((exp - Date.now()) / 36e5)); return "deletes in " + h + (h === 1 ? " hour" : " hours"); };
+async function renderTakes(){
+  const box = $("tkBox"); box.hidden = !shOpenId; if (!shOpenId) return;
+  await expireTakes();
+  const list = (await TAKES.all()).filter(t => t.pieceId === shOpenId && !t.deleted).sort((a, b) => b.date.localeCompare(a.date));
+  TK.sel = TK.sel.filter(id => list.some(t => t.id === id));
+  const on = store.get("gOn", false);
+  $("tkList").innerHTML = list.map(t => {
+    const where = t.driveId ? "In Google Drive" : TK.pct[t.id] != null ? `Uploading ${Math.round(TK.pct[t.id] * 100)}%` : on ? "Waiting to upload" : "On this device only";
+    return `<div class="tk" data-id="${t.id}"><input type="checkbox" aria-label="Watch this take" ${TK.sel.includes(t.id) ? "checked" : ""}>
+      <div><b>${new Date(t.date).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}</b>
+        <div class="meta">${t.bpm ? t.bpm + " bpm \u00b7 " : ""}${tkDur(t.dur || 0)} \u00b7 ${where}${t.exp ? " \u00b7 " + tkLeft(t.exp) : ""}</div></div>
+      <div class="acts">${t.exp ? `<button class="btn" data-keep>Keep</button>` : `<button class="btn" data-temp title="Delete this take after 1 day">Delete tomorrow</button>`}<button class="btn" data-check>Check pitch</button><button class="del" data-del>Delete</button></div></div>`;
+  }).join("") || `<div class="empty">Record a take now and then to hear and see how this piece comes along. Tick one to watch it, or two to compare them side by side.</div>`;
+  $("tkNote").textContent = list.length && !on ? "Takes stay on this device. Connect Google Drive in Sheet music settings to keep them in your Drive." : "";
+  renderTakeView(list);
+}
+async function takeUrl(t){
+  if (t.blob) return URL.createObjectURL(t.blob);
+  if (!t.driveId || !G.token()) throw new Error("This take is in Google Drive. Sign in to Google Drive to watch it.");
+  return URL.createObjectURL(await gFetch(G.api + "files/" + t.driveId + "?alt=media").then(r => r.blob()));
+}
+async function renderTakeView(list){
+  const pick = TK.sel.map(id => list.find(t => t.id === id)).filter(Boolean).sort((a, b) => a.date.localeCompare(b.date));
+  $("tkVids").querySelectorAll("video").forEach(v => { v.pause(); URL.revokeObjectURL(v.src); });
+  $("tkView").hidden = !pick.length; $("tkVids").innerHTML = "";
+  if (!pick.length) return;
+  $("tkViewNote").textContent = pick.some(t => !t.blob) ? "Downloading from Google Drive\u2026" : "";
+  try {
+    for (const t of pick){
+      const f = document.createElement("figure"), v = document.createElement("video");
+      v.className = "tkvid"; v.playsInline = true; v.controls = true; v.src = await takeUrl(t);
+      f.append(v, Object.assign(document.createElement("figcaption"), { textContent: new Date(t.date).toLocaleDateString() + (t.bpm ? " \u00b7 " + t.bpm + " bpm" : "") }));
+      $("tkVids").append(f);
+    }
+    $("tkViewNote").textContent = pick.length > 1 ? "Both play together; you hear the newer one." : "";
+  } catch (e) { $("tkViewNote").textContent = e.message; }
+}
+$("tkPlay").addEventListener("click", () => {
+  const vs = [...$("tkVids").querySelectorAll("video")];
+  vs.forEach((v, i) => { v.muted = i < vs.length - 1; v.currentTime = 0; v.play().catch(() => {}); });
+});
+$("tkList").addEventListener("change", e => {
+  const row = e.target.closest(".tk"); if (!row) return;
+  const id = row.dataset.id;
+  TK.sel = e.target.checked ? TK.sel.concat(id).slice(-2) : TK.sel.filter(x => x !== id);
+  renderTakes();
+});
+$("tkList").addEventListener("click", async e => {
+  const row = e.target.closest(".tk"), b = e.target.closest("button"); if (!row || !b) return;
+  const t = await TAKES.get(row.dataset.id); if (!t) return;
+  if ("keep" in b.dataset || "temp" in b.dataset){
+    t.exp = "keep" in b.dataset ? 0 : Date.now() + 864e5; t.expDirty = !!t.driveId; await TAKES.put(t); renderTakes(); driveSoon();
+  } else if ("check" in b.dataset){
+    b.textContent = "Opening\u2026";
+    try { const url = await takeUrl(t), blob = await (await fetch(url)).blob(); showTab("t-listen"); await analyseRecording(blob, t.title + ", " + new Date(t.date).toLocaleDateString()); }
+    catch (err) { $("tkNote").textContent = err.message; }
+    b.textContent = "Check pitch";
+  } else if ("del" in b.dataset){
+    if (!b.classList.contains("confirm")){ b.classList.add("confirm"); b.textContent = "Confirm delete"; return; }
+    if (t.driveId){ t.deleted = true; delete t.blob; await TAKES.put(t); driveSoon(); } else await TAKES.del(t.id);
+    renderTakes();
+  }
+});
+$("tkRec").addEventListener("click", async () => {
+  if (TK.rec) return;
+  try {
+    if (navigator.audioSession) navigator.audioSession.type = "play-and-record";
+    TK.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+  } catch (e) {
+    $("tkNote").textContent = location.protocol === "https:" || location.hostname === "localhost" ? "The camera or microphone is blocked. Allow them for this site, then try again." : MIC_BLOCKED;
+    return;
+  }
+  const mime = ["video/mp4", "video/webm;codecs=vp9,opus", "video/webm"].find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || "";
+  const parts = [], mr = new MediaRecorder(TK.stream, Object.assign({ videoBitsPerSecond: 2500000 }, mime ? { mimeType: mime } : {}));
+  mr.ondataavailable = e => { if (e.data.size) parts.push(e.data); };
+  mr.onstop = async () => {
+    const keep = !TK.cancel, dur = (Date.now() - TK.t0) / 1000;
+    TK.stream.getTracks().forEach(t => t.stop()); TK.stream = null; TK.rec = null; clearInterval(TK.tick);
+    if (navigator.audioSession) navigator.audioSession.type = "playback";
+    $("tkLive").hidden = true; $("tkRec").disabled = false; $("tkCam").srcObject = null;
+    if (!keep || !parts.length) return;
+    const p = await LIB.get(shOpenId), r = repFor(shOpenId), blob = new Blob(parts, { type: mr.mimeType || mime || "video/webm" });
+    const t = { id: newId(), pieceId: shOpenId, title: p ? p.title : "Untitled", date: new Date().toISOString(), bpm: r ? r.current : SH.bpm,
+      mime: blob.type, size: blob.size, dur, blob, exp: store.get("tkAuto", false) ? Date.now() + 864e5 : 0 };
+    await TAKES.put(t); TK.sel = [t.id];
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+    renderTakes(); driveSoon();
+  };
+  TK.cancel = false; TK.rec = mr; TK.t0 = Date.now(); mr.start(1000);
+  $("tkCam").srcObject = TK.stream; $("tkLive").hidden = false; $("tkRec").disabled = true;
+  $("tkTime").textContent = "0:00"; TK.tick = setInterval(() => { $("tkTime").textContent = tkDur((Date.now() - TK.t0) / 1000); }, 500);
+});
+$("tkAuto").checked = store.get("tkAuto", false);
+$("tkAuto").addEventListener("change", e => store.set("tkAuto", e.target.checked));
+$("tkStop").addEventListener("click", () => { if (TK.rec) TK.rec.stop(); });
+$("tkCancel").addEventListener("click", () => { if (TK.rec){ TK.cancel = true; TK.rec.stop(); } });
+// Drive: big files go up in 8 MB pieces through a resumable upload, so a slow connection shows progress.
+async function gUploadBig(meta, blob, onProgress){
+  const r = await gFetch(G.up + "files?uploadType=resumable&fields=id", { method: "POST",
+    headers: { "Content-Type": "application/json; charset=UTF-8", "X-Upload-Content-Type": blob.type, "X-Upload-Content-Length": String(blob.size) },
+    body: JSON.stringify(meta) });
+  const url = r.headers.get("Location");
+  if (!url) return gUpload(meta, blob);
+  const CH = 8 * 1024 * 1024;
+  for (let at = 0; ; ){
+    const end = Math.min(blob.size, at + CH);
+    const res = await fetch(url, { method: "PUT", headers: { "Content-Range": `bytes ${at}-${end - 1}/${blob.size}` }, body: blob.slice(at, end) });
+    if (res.status === 308){ const rg = res.headers.get("Range"); at = rg ? +rg.split("-")[1] + 1 : end; onProgress(at / blob.size); continue; }
+    if (!res.ok) throw new Error("Google Drive error " + res.status);
+    return (await res.json()).id;
+  }
+}
+async function gSubfolder(parent, name){
+  const q = `mimeType='application/vnd.google-apps.folder' and name='${name.replace(/['\\]/g, "\\$&")}' and '${parent}' in parents and trashed=false`;
+  const found = await gFetch(G.api + "files?fields=files(id)&q=" + encodeURIComponent(q)).then(r => r.json());
+  if (found.files && found.files[0]) return found.files[0].id;
+  return (await gFetch(G.api + "files?fields=id", { method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, parents: [parent], mimeType: "application/vnd.google-apps.folder" }) }).then(r => r.json())).id;
+}
+async function syncTakes(folder){
+  await expireTakes();
+  const mine = await TAKES.all();
+  for (const t of mine.filter(t => !t.deleted && t.driveId && t.expDirty)){
+    await gFetch(G.api + "files/" + t.driveId, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ appProperties: { exp: String(t.exp || 0) } }) });
+    t.expDirty = false; await TAKES.put(t);
+  }
+  for (const t of mine.filter(t => t.deleted)){ if (t.driveId) await gTrash(t.driveId); await TAKES.del(t.id); }
+  for (const t of mine.filter(t => !t.deleted && !t.driveId && t.blob)){
+    const dir = await gSubfolder(await gSubfolder(folder, "Recordings"), fileStem(t.title));
+    const d = new Date(t.date), stamp = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0") +
+      " " + String(d.getHours()).padStart(2, "0") + "." + String(d.getMinutes()).padStart(2, "0");
+    TK.pct[t.id] = 0; renderTakes();
+    t.driveId = await gUploadBig({ name: `${stamp}${t.bpm ? " " + t.bpm + "bpm" : ""}.${tkExt(t.mime)}`, parents: [dir], mimeType: t.mime,
+      appProperties: { vprKind: "take", vprTake: t.id, vprPiece: t.pieceId, date: t.date, bpm: String(t.bpm || ""), dur: String(Math.round(t.dur || 0)), exp: String(t.exp || 0) } },
+      t.blob, f => { TK.pct[t.id] = f; renderTakes(); });
+    delete TK.pct[t.id]; delete t.blob; await TAKES.put(t);
+  }
+  // Takes recorded on other devices appear here (to be played from Drive); ones deleted elsewhere go.
+  let remote = [], page = "";
+  do {
+    const r = await gFetch(G.api + "files?pageSize=1000&fields=nextPageToken,files(id,name,mimeType,size,appProperties)&q=" +
+      encodeURIComponent("appProperties has { key='vprKind' and value='take' } and trashed=false") + (page ? "&pageToken=" + page : "")).then(r => r.json());
+    remote = remote.concat(r.files || []); page = r.nextPageToken || "";
+  } while (page);
+  const have = new Map((await TAKES.all()).map(t => [t.id, t])), seen = new Set();
+  for (const f of remote){
+    const a = f.appProperties || {}; if (!a.vprTake) continue; seen.add(a.vprTake);
+    const mine1 = have.get(a.vprTake);
+    if (!mine1){ const p = await LIB.get(a.vprPiece);
+      await TAKES.put({ id: a.vprTake, pieceId: a.vprPiece, title: p ? p.title : "", date: a.date, bpm: +a.bpm || 0, dur: +a.dur || 0, mime: f.mimeType, size: +f.size || 0, driveId: f.id, exp: +a.exp || 0 }); }
+    else if (!mine1.expDirty && (+a.exp || 0) !== (mine1.exp || 0)){ mine1.exp = +a.exp || 0; await TAKES.put(mine1); }
+  }
+  for (const t of have.values()) if (t.driveId && !seen.has(t.id)) await TAKES.del(t.id);
+  renderTakes();
+}
 // Playback: abcjs synth with General MIDI samples; the metronome is abcjs's drum track (wood block, accent on beat 1).
 seg($("shSound"), ["violin", "piano"], SH.sound, v => { SH.sound = v; store.set("shSound", v); restartSheet(); }, v => v === "violin" ? "Violin" : "Piano");
 seg($("shClick"), ["off", "count", "on", "only"], SH.click, v => { SH.click = v; store.set("shClick", v); restartSheet(); },
@@ -2985,7 +3212,8 @@ function stopSheet(keepCount){
   if (SH.timer) try { SH.timer.stop(); } catch (e) {}
   SH.synth = null; SH.timer = null; SH.playing = false; SH.curLine = -1; clearHl();
   playLabel("Play");
-  if (!keepCount){ SH.reps = 0; loopInfo(); }
+  scoreDone();
+  if (!keepCount){ SH.reps = 0; loopInfo(); if (SH.mic){ SH.mic.stop(); SH.mic = null; } }
 }
 
 // Where to start: tap a note. Notes are walked in the order they are written (first voice of the first staff).
@@ -3047,6 +3275,59 @@ function loopInfo(){
 }
 seg($("shLoop"), [0, 1, 2, 4, 8], SH.loop, v => { SH.loop = v; store.set("shLoop", v); SH.reps = 0; loopInfo(); restartSheet(); }, v => v ? v + (v === 1 ? " bar" : " bars") : "Off");
 loopInfo();
+// Scoring: while the piece plays (melody muted), the microphone's pitch during each written note is compared with that
+// note. Each note gets the median of its readings, skipping the first 80 ms of the bow stroke.
+$("shScore").checked = SH.score;
+$("shScore").addEventListener("change", e => { SH.score = e.target.checked; store.set("shScoreOn", SH.score); if (SH.playing){ stopSheet(); playSheet(); } });
+async function scoreStart(){
+  SH.sc = { notes: [], cur: null, fresh: true };
+  if (SH.mic) return;
+  try {
+    SH.mic = await listen(f => {
+      const c = SH.sc && SH.sc.cur; if (!c || !f || performance.now() - c.t0 < 80) return;
+      let d = hzToMidi(f) - c.pitch; d -= 12 * Math.round(d / 12);   // an octave slip by the pitch tracker isn't a wrong note
+      c.cents.push(d * 100);
+    });
+    $("shScoreNote").hidden = false; $("shScoreNote").className = "note"; $("shScoreNote").textContent = "Listening. Play along after the count-in.";
+  } catch (e) {
+    SH.sc = null; $("shScoreNote").hidden = false; $("shScoreNote").className = "note bad";
+    $("shScoreNote").textContent = location.protocol === "https:" || location.hostname === "localhost" ? "The microphone is blocked. Allow it for this site, then try again." : MIC_BLOCKED;
+  }
+}
+function scoreNote(ev, els){
+  const S = SH.sc; if (S.cur) S.notes.push(S.cur);
+  // The last time's colours stay on the music until this time's first note.
+  if (S.fresh){ S.fresh = false; $("shPaper").querySelectorAll(".sc-good,.sc-warn,.sc-bad").forEach(el => el.classList.remove("sc-good", "sc-warn", "sc-bad")); }
+  const p = (ev.midiPitches || []).find(m => m.instrument !== 128);
+  S.cur = p ? { pitch: p.pitch, els, t0: performance.now(), cents: [] } : null;
+}
+function scoreDone(){
+  const S = SH.sc; if (!S) return;
+  if (S.cur){ S.notes.push(S.cur); S.cur = null; }
+  if (!S.notes.length) return;
+  const med = a => { const b = [...a].sort((x, y) => x - y); return b[b.length >> 1]; };
+  const heard = [];
+  for (const n of S.notes){
+    if (n.cents.length < 2) continue;
+    n.c = med(n.cents); heard.push(n);
+    const cls = Math.abs(n.c) <= 10 ? "sc-good" : Math.abs(n.c) <= 25 ? "sc-warn" : "sc-bad";
+    n.els.forEach(el => el.classList.add(cls));
+  }
+  const bar = n => { const m = n.els.map(el => /\babcjs-mm(\d+)\b/.exec(el.getAttribute("class") || "")).find(Boolean); return m ? +m[1] + 1 : null; };
+  // More than a quarter tone out counts as a different note, not as out of tune.
+  const near = heard.filter(n => Math.abs(n.c) <= 50), good = near.filter(n => Math.abs(n.c) <= 10).length;
+  const avg = near.reduce((s, n) => s + Math.abs(n.c), 0) / (near.length || 1);
+  const where = n => (bar(n) ? "bar " + bar(n) + " " : "") + noteName(n.pitch);
+  const worst = heard.filter(n => Math.abs(n.c) > 10).sort((a, b) => (Math.abs(a.c) > 50) - (Math.abs(b.c) > 50) || Math.abs(b.c) - Math.abs(a.c)).slice(0, 3)
+    .map(n => Math.abs(n.c) > 50 ? where(n) + " sounded like " + noteName(n.pitch + Math.round(n.c / 100)) : where(n) + ", " + Math.round(Math.abs(n.c)) + "\u00a2 " + (n.c > 0 ? "sharp" : "flat"));
+  const miss = S.notes.length - heard.length;
+  $("shScoreNote").hidden = false; $("shScoreNote").className = "note";
+  $("shScoreNote").textContent = !heard.length ? "No notes were heard. Play closer to the phone, or turn the phone's volume down so the clicks don't drown you out." :
+    `${SH.reps ? "Time " + SH.reps + ": " : ""}${good} of ${heard.length} notes in tune (within 10\u00a2)` + (near.length ? `, ${Math.round(avg)}\u00a2 off on average.` : ".") +
+    (worst.length ? " Most off: " + worst.join("; ") + "." : "") + (miss ? ` ${miss} note${miss === 1 ? " wasn't" : "s weren't"} heard.` : "") +
+    " Green is in tune, amber within 25\u00a2, red further off.";
+  SH.sc = SH.playing ? { notes: [], cur: null } : null;
+}
 // After a clean time through, the next one goes 5 bpm faster.
 $("shClean").addEventListener("click", () => {
   setShBpm(SH.bpm + 5);
@@ -3077,7 +3358,8 @@ function restartSheet(){
 async function playSheet(){
   if (!SH.tune) return;
   const c = audio();   // created inside the tap so iPhone allows sound
-  const A = window.ABCJS, tune = SH.tune, mode = SH.click;
+  const A = window.ABCJS, tune = SH.tune, mode = SH.score && SH.click === "off" ? "count" : SH.click;
+  if (SH.score) await scoreStart();
   const beats = Math.max(1, Math.round(tune.getBeatsPerMeasure())), intro = mode === "off" ? 0 : 1;
   const opts = { program: SH.sound === "piano" ? 0 : 40, qpm: SH.bpm, onEnded: () => {
     if (SH.synth !== synth) return;
@@ -3089,7 +3371,7 @@ async function playSheet(){
     opts.drumBars = 1; opts.drumIntro = 1;
     if (mode === "count") opts.drumOff = true;
   }
-  if (mode === "only") opts.sequenceCallback = tracks => tracks.forEach(t => t.forEach(ev => { if (ev.cmd === "note" && ev.instrument !== 128) ev.volume = 0; }));
+  if (mode === "only" || SH.score) opts.sequenceCallback = tracks => tracks.forEach(t => t.forEach(ev => { if (ev.cmd === "note" && ev.instrument !== 128) ev.volume = 0; }));
   let play = tune, map = null;
   if (SH.start || SH.loop){
     const cut = sliceAbc($("shAbc").value, SH.start && SH.start.char, loopEnd(tune));
@@ -3111,6 +3393,7 @@ async function playSheet(){
   SH.timer = new A.TimingCallbacks(play, { qpm: SH.bpm, extraMeasuresAtBeginning: intro, eventCallback: ev => {
     clearHl(); if (!ev) return;
     const els = map ? (ev.startCharArray || []).flatMap(ch => map.get(ch) || []) : (ev.elements || []).flat();
+    if (SH.sc) scoreNote(ev, els);
     els.forEach(el => el.classList.add("hl"));
     if (els[0]) follow(els[0]);
   } });
