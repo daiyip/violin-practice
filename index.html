@@ -717,6 +717,7 @@ details>summary:hover{color:var(--ink)}
       <div class="panel" id="shProg" hidden></div>
       <div class="panel stack" id="tkBox" hidden>
         <div class="row" style="justify-content:space-between"><h3 style="margin:0">Recordings</h3><button class="btn" id="tkRec">Record a take</button></div>
+        <label class="row small" style="gap:8px"><input type="checkbox" id="tkAuto"> Delete new takes after 1 day <span class="muted">(tap Keep on any you want to hold on to)</span></label>
         <div class="stack" id="tkLive" hidden style="gap:10px">
           <video id="tkCam" class="tkvid" playsinline muted autoplay></video>
           <div class="row"><button class="btn primary" id="tkStop">Stop and save</button><span class="mono" id="tkTime">0:00</span><span style="flex:1"></span><button class="btn" id="tkCancel">Cancel</button></div>
@@ -2618,7 +2619,8 @@ const LIB = {
   put(p){ return this.run("readwrite", s => s.put(p)); },
   del(id){ return this.run("readwrite", s => s.delete(id)); }
 };
-// Recorded takes: { id, pieceId, title, date, bpm, mime, size, dur, blob (until it is in Drive), driveId, deleted }
+// Recorded takes: { id, pieceId, title, date, bpm, mime, size, dur, blob (until it is in Drive), driveId, deleted,
+//   exp (when it deletes itself; 0 = keep), expDirty (exp changed here, not yet in Drive) }
 const TAKES = {
   all(){ return LIB.run("readonly", s => s.getAll(), "takes"); },
   get(id){ return LIB.run("readonly", s => s.get(id), "takes"); },
@@ -3034,8 +3036,18 @@ $("shGSave").addEventListener("click", () => {
 const TK = { rec: null, stream: null, t0: 0, tick: 0, sel: [], busy: false, pct: {} };
 const tkExt = mime => /mp4/.test(mime) ? "mp4" : "webm";
 const tkDur = s => Math.floor(s / 60) + ":" + String(Math.round(s % 60)).padStart(2, "0");
+// Takes marked to delete themselves go once their day is up, here and (at the next sync) in Drive.
+async function expireTakes(){
+  let n = 0;
+  for (const t of await TAKES.all()) if (!t.deleted && t.exp && t.exp <= Date.now()){
+    n++; if (t.driveId){ t.deleted = true; delete t.blob; await TAKES.put(t); } else await TAKES.del(t.id);
+  }
+  if (n) driveSoon();
+}
+const tkLeft = exp => { const h = Math.max(1, Math.round((exp - Date.now()) / 36e5)); return "deletes in " + h + (h === 1 ? " hour" : " hours"); };
 async function renderTakes(){
   const box = $("tkBox"); box.hidden = !shOpenId; if (!shOpenId) return;
+  await expireTakes();
   const list = (await TAKES.all()).filter(t => t.pieceId === shOpenId && !t.deleted).sort((a, b) => b.date.localeCompare(a.date));
   TK.sel = TK.sel.filter(id => list.some(t => t.id === id));
   const on = store.get("gOn", false);
@@ -3043,8 +3055,8 @@ async function renderTakes(){
     const where = t.driveId ? "In Google Drive" : TK.pct[t.id] != null ? `Uploading ${Math.round(TK.pct[t.id] * 100)}%` : on ? "Waiting to upload" : "On this device only";
     return `<div class="tk" data-id="${t.id}"><input type="checkbox" aria-label="Watch this take" ${TK.sel.includes(t.id) ? "checked" : ""}>
       <div><b>${new Date(t.date).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })}</b>
-        <div class="meta">${t.bpm ? t.bpm + " bpm \u00b7 " : ""}${tkDur(t.dur || 0)} \u00b7 ${where}</div></div>
-      <div class="acts"><button class="btn" data-check>Check pitch</button><button class="del" data-del>Delete</button></div></div>`;
+        <div class="meta">${t.bpm ? t.bpm + " bpm \u00b7 " : ""}${tkDur(t.dur || 0)} \u00b7 ${where}${t.exp ? " \u00b7 " + tkLeft(t.exp) : ""}</div></div>
+      <div class="acts">${t.exp ? `<button class="btn" data-keep>Keep</button>` : `<button class="btn" data-temp title="Delete this take after 1 day">Delete tomorrow</button>`}<button class="btn" data-check>Check pitch</button><button class="del" data-del>Delete</button></div></div>`;
   }).join("") || `<div class="empty">Record a take now and then to hear and see how this piece comes along. Tick one to watch it, or two to compare them side by side.</div>`;
   $("tkNote").textContent = list.length && !on ? "Takes stay on this device. Connect Google Drive in Sheet music settings to keep them in your Drive." : "";
   renderTakeView(list);
@@ -3083,7 +3095,9 @@ $("tkList").addEventListener("change", e => {
 $("tkList").addEventListener("click", async e => {
   const row = e.target.closest(".tk"), b = e.target.closest("button"); if (!row || !b) return;
   const t = await TAKES.get(row.dataset.id); if (!t) return;
-  if ("check" in b.dataset){
+  if ("keep" in b.dataset || "temp" in b.dataset){
+    t.exp = "keep" in b.dataset ? 0 : Date.now() + 864e5; t.expDirty = !!t.driveId; await TAKES.put(t); renderTakes(); driveSoon();
+  } else if ("check" in b.dataset){
     b.textContent = "Opening\u2026";
     try { const url = await takeUrl(t), blob = await (await fetch(url)).blob(); showTab("t-listen"); await analyseRecording(blob, t.title + ", " + new Date(t.date).toLocaleDateString()); }
     catch (err) { $("tkNote").textContent = err.message; }
@@ -3115,7 +3129,7 @@ $("tkRec").addEventListener("click", async () => {
     if (!keep || !parts.length) return;
     const p = await LIB.get(shOpenId), r = repFor(shOpenId), blob = new Blob(parts, { type: mr.mimeType || mime || "video/webm" });
     const t = { id: newId(), pieceId: shOpenId, title: p ? p.title : "Untitled", date: new Date().toISOString(), bpm: r ? r.current : SH.bpm,
-      mime: blob.type, size: blob.size, dur, blob };
+      mime: blob.type, size: blob.size, dur, blob, exp: store.get("tkAuto", false) ? Date.now() + 864e5 : 0 };
     await TAKES.put(t); TK.sel = [t.id];
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
     renderTakes(); driveSoon();
@@ -3124,6 +3138,8 @@ $("tkRec").addEventListener("click", async () => {
   $("tkCam").srcObject = TK.stream; $("tkLive").hidden = false; $("tkRec").disabled = true;
   $("tkTime").textContent = "0:00"; TK.tick = setInterval(() => { $("tkTime").textContent = tkDur((Date.now() - TK.t0) / 1000); }, 500);
 });
+$("tkAuto").checked = store.get("tkAuto", false);
+$("tkAuto").addEventListener("change", e => store.set("tkAuto", e.target.checked));
 $("tkStop").addEventListener("click", () => { if (TK.rec) TK.rec.stop(); });
 $("tkCancel").addEventListener("click", () => { if (TK.rec){ TK.cancel = true; TK.rec.stop(); } });
 // Drive: big files go up in 8 MB pieces through a resumable upload, so a slow connection shows progress.
@@ -3150,7 +3166,12 @@ async function gSubfolder(parent, name){
     body: JSON.stringify({ name, parents: [parent], mimeType: "application/vnd.google-apps.folder" }) }).then(r => r.json())).id;
 }
 async function syncTakes(folder){
+  await expireTakes();
   const mine = await TAKES.all();
+  for (const t of mine.filter(t => !t.deleted && t.driveId && t.expDirty)){
+    await gFetch(G.api + "files/" + t.driveId, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ appProperties: { exp: String(t.exp || 0) } }) });
+    t.expDirty = false; await TAKES.put(t);
+  }
   for (const t of mine.filter(t => t.deleted)){ if (t.driveId) await gTrash(t.driveId); await TAKES.del(t.id); }
   for (const t of mine.filter(t => !t.deleted && !t.driveId && t.blob)){
     const dir = await gSubfolder(await gSubfolder(folder, "Recordings"), fileStem(t.title));
@@ -3158,7 +3179,7 @@ async function syncTakes(folder){
       " " + String(d.getHours()).padStart(2, "0") + "." + String(d.getMinutes()).padStart(2, "0");
     TK.pct[t.id] = 0; renderTakes();
     t.driveId = await gUploadBig({ name: `${stamp}${t.bpm ? " " + t.bpm + "bpm" : ""}.${tkExt(t.mime)}`, parents: [dir], mimeType: t.mime,
-      appProperties: { vprKind: "take", vprTake: t.id, vprPiece: t.pieceId, date: t.date, bpm: String(t.bpm || ""), dur: String(Math.round(t.dur || 0)) } },
+      appProperties: { vprKind: "take", vprTake: t.id, vprPiece: t.pieceId, date: t.date, bpm: String(t.bpm || ""), dur: String(Math.round(t.dur || 0)), exp: String(t.exp || 0) } },
       t.blob, f => { TK.pct[t.id] = f; renderTakes(); });
     delete TK.pct[t.id]; delete t.blob; await TAKES.put(t);
   }
@@ -3172,8 +3193,10 @@ async function syncTakes(folder){
   const have = new Map((await TAKES.all()).map(t => [t.id, t])), seen = new Set();
   for (const f of remote){
     const a = f.appProperties || {}; if (!a.vprTake) continue; seen.add(a.vprTake);
-    if (!have.has(a.vprTake)){ const p = await LIB.get(a.vprPiece);
-      await TAKES.put({ id: a.vprTake, pieceId: a.vprPiece, title: p ? p.title : "", date: a.date, bpm: +a.bpm || 0, dur: +a.dur || 0, mime: f.mimeType, size: +f.size || 0, driveId: f.id }); }
+    const mine1 = have.get(a.vprTake);
+    if (!mine1){ const p = await LIB.get(a.vprPiece);
+      await TAKES.put({ id: a.vprTake, pieceId: a.vprPiece, title: p ? p.title : "", date: a.date, bpm: +a.bpm || 0, dur: +a.dur || 0, mime: f.mimeType, size: +f.size || 0, driveId: f.id, exp: +a.exp || 0 }); }
+    else if (!mine1.expDirty && (+a.exp || 0) !== (mine1.exp || 0)){ mine1.exp = +a.exp || 0; await TAKES.put(mine1); }
   }
   for (const t of have.values()) if (t.driveId && !seen.has(t.id)) await TAKES.del(t.id);
   renderTakes();
