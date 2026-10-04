@@ -57,7 +57,7 @@ While the consent screen is in Testing, only the listed test users can sign in. 
 - `index.html` contains the whole app: HTML, CSS and JavaScript.
 - `pose/` holds MediaPipe Tasks Vision 0.10.14 (Apache 2.0) and the `pose_landmarker_lite` model, stored base64-encoded as `.b64.txt`.
 - `abcjs/` holds abcjs 6.7.1 (MIT), which draws and plays the sheet-music tab's notation.
-- `icons/` holds the black-and-white logo: `logo.svg` (browser tab and page header) and PNGs for the iPhone home screen (`icon-180.png`) and other sizes.
+- `icons/` holds the logo: `logo.svg` (browser tab and page header; a transparent violin that turns white in dark mode) and PNGs for the iPhone home screen (`icon-180.png`) and other sizes.
 - `anthropic/sdk.min.mjs` is the Anthropic TypeScript SDK 0.131.0 (MIT) built as a single browser ES module for the sheet-music tab. To rebuild it for a newer version:
 
   ```sh
