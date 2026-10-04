@@ -20,7 +20,7 @@ The app has five tabs: **Today**, **Sheet music**, **Tools** (Tuner, Metronome, 
 | **Ear training** | Interval recognition (with a tune to remember each interval) and a sharp/flat/in-tune drill that narrows to the smallest pitch difference you can hear. |
 | **Listen back** | Record, or open a recording: pitch trace and per-note intonation (cents sharp/flat), slow-down playback with A–B loop, and a rhythm check (tempo you played, rushing/dragging, evenness). |
 | **Posture** (under Listen back) | Open a video of yourself playing (or use the camera): checks shoulder, head tilt, left wrist, bow path and bow elbow using on-device pose tracking. |
-| **Practice log** | Session timer, log with focus tags and notes, weekly chart, streak, and a weekly summary. With Google Drive connected, the log, repertoire, scale runs and ear-training scores are backed up to `Practice log backup.json` in the app's Drive folder and merged across devices. |
+| **Practice log** | Practice time is logged automatically: while the metronome, drone, tuner, scale trainer, ear training or sheet music player is in use (and the app was touched in the last 10 minutes), the minutes are added to one entry per day and device, with what you worked on. Also a session timer, log with focus tags and notes, weekly chart, streak, and a weekly summary. With Google Drive connected, the log, repertoire, scale runs and ear-training scores are backed up to `Practice log backup.json` in the app's Drive folder and merged across devices. |
 
 All audio analysis is plain signal processing (YIN pitch detection, onset detection). The posture tab uses Google's MediaPipe pose model, which runs entirely in the browser; no audio or video leaves your device.
 

@@ -849,6 +849,7 @@ details>summary:hover{color:var(--ink)}
         <h3>Session timer</h3>
         <div class="timer" id="timer">00:00</div>
         <div class="row"><button class="btn primary" id="timerBtn">Start</button><button class="btn" id="timerReset">Reset</button><button class="btn" id="timerUse">Use in log</button></div>
+        <div class="small muted" id="autoToday"></div>
       </div>
       <form class="panel stack" id="logForm">
         <h3>Log a session</h3>
@@ -3515,6 +3516,62 @@ if (takeGoogleToken()){
   else { SH.fromGoogle = true; showTab("t-sheet"); }
 }
 if (!$("p-sheet").hidden) sheetOpen(); else syncDrive();
+
+/* ---------- Automatic practice log ---------- */
+// Every 5 seconds, if a tool is sounding or listening (and the app was touched in the last 10 minutes), that time is
+// counted towards what is being practised. Each device keeps one log entry per day ("a-<date>-<device>"), written every
+// few minutes and when the app is put away, so the time shows up in the log without typing it in.
+const AUTO = { tick: 5, touched: Date.now(), earAt: 0, dev: store.get("devId", "") || (() => { const d = newId(); store.set("devId", d); return d; })(), lastWrite: 0 };
+["pointerdown", "keydown"].forEach(ev => document.addEventListener(ev, e => {
+  AUTO.touched = Date.now(); if (e.target.closest && e.target.closest("#p-ear")) AUTO.earAt = Date.now();
+}, true));
+function autoWhat(){
+  const piece = () => (SH.pieceId || shOpenId) ? $("shTitle").textContent : "Sheet music";
+  if (SH.playing || SH.mic || TK.rec) return piece();
+  if (SC.mic) return "Scales";
+  if (lbRec) return "Listen back";
+  if (Date.now() - AUTO.earAt < 30000) return "Ear training";
+  if (D.on) return "Drone";
+  if (mic) return "Tuning";
+  if (M.running) return "Metronome";
+  return null;
+}
+const AUTO_FOCUS = { Scales: "Scales", Drone: "Intonation", Tuning: "Intonation", "Ear training": "Intonation", "Listen back": null, Metronome: null };
+function autoDay(){ const d = store.get("autoDay", null); return d && d.date ? d : { date: today(), secs: {} }; }
+async function autoWrite(day){
+  if (logMode !== "local" || !logStore.api) return false;
+  const total = Object.values(day.secs).reduce((a, b) => a + b, 0), id = "a-" + day.date + "-" + AUTO.dev;
+  if (total < 60) return true;
+  const parts = Object.entries(day.secs).sort((a, b) => b[1] - a[1]);
+  const pieces = parts.map(p => p[0]).filter(k => !(k in AUTO_FOCUS));
+  const focus = [...new Set(parts.map(p => p[0] in AUTO_FOCUS ? AUTO_FOCUS[p[0]] : "Repertoire").filter(Boolean))];
+  const e = { date: day.date, minutes: Math.round(total / 60), focus, piece: pieces.join(", "), auto: true,
+    note: "Logged automatically: " + parts.map(([k, v]) => k + " " + Math.max(1, Math.round(v / 60)) + " min").join(", ") + "." };
+  const old = entries.find(x => x.id === id);
+  if (old){ if (old.minutes !== e.minutes || old.note !== e.note) await logStore.api.update(id, e); }
+  else await logStore.api.add(Object.assign({ id, createdAt: new Date().toISOString() }, e));
+  AUTO.lastWrite = Date.now();
+  return true;
+}
+function autoShow(day){
+  const total = Object.values(day.secs).reduce((a, b) => a + b, 0);
+  $("autoToday").textContent = total < 60 ? "Time spent with the metronome, drone, tuner, scales, ear training or sheet music is added to the log automatically." :
+    `Logged automatically today: ${Math.round(total / 60)} min (${Object.entries(day.secs).sort((a, b) => b[1] - a[1]).map(([k, v]) => k + " " + Math.max(1, Math.round(v / 60))).join(", ")}).`;
+}
+setInterval(() => {
+  let day = autoDay();
+  if (day.date !== today()){ const old = day; day = { date: today(), secs: {} }; autoWrite(old).then(ok => { if (!ok) store.set("autoDay", old); }); store.set("autoDay", day); }
+  const what = Date.now() - AUTO.touched < 600000 ? autoWhat() : null;
+  if (what){ day.secs[what] = (day.secs[what] || 0) + AUTO.tick; store.set("autoDay", day); }
+  if (what && Date.now() - AUTO.lastWrite > 300000) autoWrite(day);
+  autoShow(day);
+}, AUTO.tick * 1000);
+const autoFlush = () => { const d = autoDay(); autoWrite(d); };
+document.addEventListener("visibilitychange", () => { if (document.hidden) autoFlush(); });
+window.addEventListener("pagehide", autoFlush);
+autoShow(autoDay());
+// A day that ended while the app was closed is written the first time the log is ready.
+setTimeout(async () => { const d = autoDay(); if (d.date !== today() && await autoWrite(d)) store.set("autoDay", { date: today(), secs: {} }); }, 3000);
 
 /* ---------- Today's plan ---------- */
 const PLAN_KEYS = [{ n: "G", pc: 7 }, { n: "D", pc: 2 }, { n: "A", pc: 9 }, { n: "C", pc: 0 }, { n: "F", pc: 5 }, { n: "B♭", pc: 10 }, { n: "E", pc: 4 }];
