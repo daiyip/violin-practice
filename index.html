@@ -39,18 +39,22 @@ h1.brand img{width:1.25em;height:1.25em;flex:none}
 @media (prefers-color-scheme: light){:root[data-theme="dark"] h1.brand img{filter:invert(1)}}
 .pitchref{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}
 .pitchref select{font-family:var(--f-mono)}
-nav.tabs{display:flex;flex-wrap:nowrap;justify-content:space-between;gap:0;border-bottom:1px solid var(--line);margin-bottom:20px}
-nav.tabs button{appearance:none;border:0;background:none;color:var(--muted);font:500 13.5px var(--f-body);padding:10px 6px;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
-nav.tabs svg{width:17px;height:17px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
-/* Phones: one row of icon buttons; the open tool's name is the panel heading below */
+nav.tabs{display:flex;flex-wrap:nowrap;gap:6px;border-bottom:1px solid var(--line);margin-bottom:14px}
+nav.tabs button{appearance:none;border:0;background:none;color:var(--muted);font:500 14px var(--f-body);padding:10px 12px;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+nav.tabs svg{width:18px;height:18px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+/* Phones: five icon buttons with short labels underneath */
 @media (max-width:960px){
-  nav.tabs{display:grid;grid-template-columns:repeat(11,minmax(0,1fr));gap:0;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);margin-inline:-16px;padding-inline:8px}
-  nav.tabs button{justify-content:center;padding:12px 0 10px;border-bottom-width:3px}
-  nav.tabs button .tl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  nav.tabs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);margin-inline:-16px;padding-inline:8px}
+  nav.tabs button{flex-direction:column;justify-content:center;gap:3px;padding:9px 0 7px;border-bottom-width:3px;font-size:11px}
   nav.tabs svg{width:23px;height:23px}
 }
 nav.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent)}
 nav.tabs button:hover{color:var(--ink)}
+/* The tools inside the open section */
+.subtabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 0 18px;padding-bottom:2px}
+.subtabs::-webkit-scrollbar{display:none}
+.subtabs button{appearance:none;flex:none;border:1px solid var(--line);background:var(--surface);color:var(--muted);font:500 13.5px var(--f-body);padding:7px 14px;border-radius:999px;cursor:pointer}
+.subtabs button[aria-selected="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
 h2{font-family:var(--f-display);font-weight:400;font-size:22px;margin:0 0 4px;text-wrap:balance}
 h3{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;margin:0 0 10px}
 .lede{color:var(--muted);margin:0 0 18px;max-width:62ch}
@@ -351,19 +355,22 @@ details>summary:hover{color:var(--ink)}
     </label>
   </header>
 
-  <nav class="tabs" role="tablist" aria-label="Tools">
-    <button role="tab" id="t-today" aria-controls="p-today" aria-selected="true" aria-label="Today" title="Today"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4M9 14.5l2 2 4-4"/></svg><span class="tl">Today</span></button>
-    <button role="tab" id="t-sheet" aria-controls="p-sheet" aria-selected="false" aria-label="Sheet music" title="Sheet music"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 8h19M2.5 16h19"/><path d="M14.5 17V4l4.5 2"/><ellipse cx="11.6" cy="17.2" rx="2.9" ry="2.1" transform="rotate(-20 11.6 17.2)"/></svg><span class="tl">Sheet music</span></button>
-    <button role="tab" id="t-tune" aria-controls="p-tune" aria-selected="false" aria-label="Tuner" title="Tuner"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3v8a3 3 0 0 0 6 0V3M12 14v7M9.5 21h5"/></svg><span class="tl">Tuner</span></button>
-    <button role="tab" id="t-metro" aria-controls="p-metro" aria-selected="false" aria-label="Metronome" title="Metronome"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 3h5l4 17.5h-13zM12 15.5l5-9M7.2 15.5h9.6"/></svg><span class="tl">Metronome</span></button>
-    <button role="tab" id="t-drone" aria-controls="p-drone" aria-selected="false" aria-label="Drone" title="Drone"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12c2-5 3.5-5 5.5 0s3.5 5 5.5 0 3.5-5 5.5 0 1.5 2.5 2.5 2.5"/></svg><span class="tl">Drone</span></button>
-    <button role="tab" id="t-board" aria-controls="p-board" aria-selected="false" aria-label="Fingerboard" title="Fingerboard"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="2.5" width="12" height="19" rx="2"/><path d="M9.5 2.5v19M12 2.5v19M14.5 2.5v19M6 8h12M6 13h12"/></svg><span class="tl">Fingerboard</span></button>
-    <button role="tab" id="t-scale" aria-controls="p-scale" aria-selected="false" aria-label="Scales" title="Scales"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20h4.5v-4.5H12V11h4.5V6.5H21"/><circle cx="5.2" cy="12.5" r="1.4"/><circle cx="9.8" cy="8" r="1.4"/><circle cx="14.3" cy="3.6" r="1.4"/></svg><span class="tl">Scales</span></button>
-    <button role="tab" id="t-ear" aria-controls="p-ear" aria-selected="false" aria-label="Ear training" title="Ear training"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 9a5 5 0 0 1 10 0c0 3-2.5 3.8-3.2 6.3C13.2 17.6 12 20 9.6 20 8 20 7 19 7 17.5"/><path d="M10 9a2 2 0 0 1 4 0c0 1.2-1 1.7-1.6 2.4"/></svg><span class="tl">Ear</span></button>
-    <button role="tab" id="t-listen" aria-controls="p-listen" aria-selected="false" aria-label="Listen back" title="Listen back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 15v-3a8 8 0 0 1 16 0v3"/><rect x="3" y="14" width="4.5" height="6.5" rx="1.5"/><rect x="16.5" y="14" width="4.5" height="6.5" rx="1.5"/></svg><span class="tl">Listen back</span></button>
-    <button role="tab" id="t-posture" aria-controls="p-posture" aria-selected="false" aria-label="Posture" title="Posture"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="4.5" r="2"/><path d="M12 7.5v7M5.5 10.5l6.5-2 6.5 2M9 21l3-6.5 3 6.5"/></svg><span class="tl">Posture</span></button>
-    <button role="tab" id="t-log" aria-controls="p-log" aria-selected="false" aria-label="Practice log" title="Practice log"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h11a1.5 1.5 0 0 1 1.5 1.5v15A1.5 1.5 0 0 1 17 21H6z"/><path d="M6 3v18M9.5 8h5.5M9.5 12h5.5M9.5 16h3.5"/></svg><span class="tl">Log</span></button>
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button role="tab" id="t-today" aria-controls="p-today" aria-selected="true" title="Today"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4M9 14.5l2 2 4-4"/></svg><span class="tl">Today</span></button>
+    <button role="tab" id="t-sheet" aria-controls="p-sheet" aria-selected="false" title="Sheet music"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 8h19M2.5 16h19"/><path d="M14.5 17V4l4.5 2"/><ellipse cx="11.6" cy="17.2" rx="2.9" ry="2.1" transform="rotate(-20 11.6 17.2)"/></svg><span class="tl">Sheet music</span></button>
+    <button role="tab" id="t-tools" aria-selected="false" title="Tools"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3v8a3 3 0 0 0 6 0V3M12 14v7M9.5 21h5"/></svg><span class="tl">Tools</span></button>
+    <button role="tab" id="t-train" aria-selected="false" title="Train"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20h4.5v-4.5H12V11h4.5V6.5H21"/><circle cx="5.2" cy="12.5" r="1.4"/><circle cx="9.8" cy="8" r="1.4"/><circle cx="14.3" cy="3.6" r="1.4"/></svg><span class="tl">Train</span></button>
+    <button role="tab" id="t-log" aria-controls="p-log" aria-selected="false" title="Log"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h11a1.5 1.5 0 0 1 1.5 1.5v15A1.5 1.5 0 0 1 17 21H6z"/><path d="M6 3v18M9.5 8h5.5M9.5 12h5.5M9.5 16h3.5"/></svg><span class="tl">Log</span></button>
   </nav>
+  <div class="subtabs" id="subtabs" role="tablist" aria-label="Tools in this section" hidden>
+    <button role="tab" id="t-tune" data-group="t-tools" aria-controls="p-tune" aria-selected="false" hidden>Tuner</button>
+    <button role="tab" id="t-metro" data-group="t-tools" aria-controls="p-metro" aria-selected="false" hidden>Metronome</button>
+    <button role="tab" id="t-drone" data-group="t-tools" aria-controls="p-drone" aria-selected="false" hidden>Drone</button>
+    <button role="tab" id="t-scale" data-group="t-train" aria-controls="p-scale" aria-selected="false" hidden>Scales</button>
+    <button role="tab" id="t-ear" data-group="t-train" aria-controls="p-ear" aria-selected="false" hidden>Ear</button>
+    <button role="tab" id="t-board" data-group="t-train" aria-controls="p-board" aria-selected="false" hidden>Fingerboard</button>
+    <button role="tab" id="t-listen" data-group="t-train" aria-controls="p-listen" aria-selected="false" hidden>Listen back</button>
+  </div>
 
   <!-- TODAY -->
   <section id="p-today" role="tabpanel" aria-labelledby="t-today" class="stack">
@@ -757,7 +764,7 @@ details>summary:hover{color:var(--ink)}
   </section>
 
   <!-- POSTURE -->
-  <section id="p-posture" role="tabpanel" aria-labelledby="t-posture" class="stack" hidden>
+  <section id="p-posture" role="tabpanel" aria-labelledby="t-listen" class="stack" hidden>
     <div>
       <h2>Posture check</h2>
       <p class="lede">Prop your phone two or three metres in front of you so your head, both arms and the violin are in the picture. Record 20 to 30 seconds of slow scales, then open the video here. Pose tracking runs on your device and nothing is uploaded.</p>
@@ -824,6 +831,11 @@ details>summary:hover{color:var(--ink)}
       <div class="row" style="justify-content:space-between"><h3 style="margin:0">History</h3><span class="small muted" id="storeInfo">Connecting…</span></div>
       <div class="entries" id="entries"></div>
     </div>
+    <div class="panel stack" id="backupBox" hidden>
+      <h3>Backup</h3>
+      <p class="small muted" id="backupState" style="margin:0"></p>
+      <div class="row"><button class="btn" id="backupBtn">Back up to Google Drive</button></div>
+    </div>
   </section>
 </div>
 
@@ -833,7 +845,7 @@ details>summary:hover{color:var(--ink)}
 const $ = id => document.getElementById(id);
 const store = {
   get(k, d){ try{ const v = localStorage.getItem("vpr:"+k); return v == null ? d : JSON.parse(v); }catch(e){ return d; } },
-  set(k, v){ try{ localStorage.setItem("vpr:"+k, JSON.stringify(v)); }catch(e){} }
+  set(k, v){ try{ localStorage.setItem("vpr:"+k, JSON.stringify(v)); }catch(e){} if (store.onSet) store.onSet(k); }
 };
 const NAMES = ["C","C♯","D","E♭","E","F","F♯","G","A♭","A","B♭","B"];
 let A4 = store.get("aref", 440);
@@ -927,19 +939,28 @@ async function listen(onPitch){
 const MIC_BLOCKED = "This view can't use your microphone. Open the app at violin.daiyip.com in Chrome or Safari, where listening works.";
 
 /* ---------- Tabs ---------- */
-const tabs = [...document.querySelectorAll('[role="tab"]')];
+// Five sections; Tools and Train each hold a few tools, picked with the row of buttons under the tab bar.
+const tabs = [...document.querySelectorAll('nav.tabs [role="tab"]')], subs = [...document.querySelectorAll('#subtabs [role="tab"]')];
+const PANELS = { "t-listen": ["p-listen", "p-posture"] };   // the posture check sits under Listen back
+const panelsOf = id => PANELS[id] || [$(id).getAttribute("aria-controls")];
 function showTab(id){
-  tabs.forEach(t => {
-    const on = t.id === id;
-    t.setAttribute("aria-selected", on);
-    $(t.getAttribute("aria-controls")).hidden = !on;
-  });
-  store.set("tab", id);
-  if (id === "t-listen"){ drawPlot(); drawRhythm(); }
+  const sub = subs.find(b => b.id === id), group = sub ? sub.dataset.group : id;
+  if (!sub && !tabs.some(t => t.id === id)) id = group = "t-today";
+  // Opening a section returns to the tool last used in it.
+  const inGroup = subs.filter(b => b.dataset.group === group);
+  const pick = sub ? id : inGroup.length ? (inGroup.find(b => b.id === store.get("sec:" + group, "")) || inGroup[0]).id : id;
+  tabs.forEach(t => t.setAttribute("aria-selected", t.id === group));
+  subs.forEach(b => { b.hidden = b.dataset.group !== group; b.setAttribute("aria-selected", b.id === pick); });
+  $("subtabs").hidden = !inGroup.length;
+  const show = new Set(panelsOf(pick));
+  document.querySelectorAll('section[role="tabpanel"]').forEach(p => { p.hidden = !show.has(p.id); });
+  if (inGroup.length) store.set("sec:" + group, pick);
+  store.set("tab", pick);
+  if (pick === "t-listen"){ drawPlot(); drawRhythm(); }
 }
-tabs.forEach(t => t.addEventListener("click", () => showTab(t.id)));
-const hashTab = { today:"t-today", tuner:"t-tune", metronome:"t-metro", drone:"t-drone", fingerboard:"t-board", scales:"t-scale", sheet:"t-sheet", ear:"t-ear", listen:"t-listen", posture:"t-posture", log:"t-log" }[location.hash.slice(1)];
-showTab(hashTab || store.get("tab", "t-today"));
+tabs.concat(subs).forEach(t => t.addEventListener("click", () => showTab(t.id)));
+const hashTab = { today:"t-today", tools:"t-tools", train:"t-train", tuner:"t-tune", metronome:"t-metro", drone:"t-drone", fingerboard:"t-board", scales:"t-scale", sheet:"t-sheet", ear:"t-ear", listen:"t-listen", posture:"t-listen", log:"t-log" }[location.hash.slice(1)];
+showTab(hashTab || ({ "t-posture": "t-listen" })[store.get("tab", "")] || store.get("tab", "t-today"));
 
 /* ---------- Tuner ---------- */
 const STRINGS = [{n:"G", m:55}, {n:"D", m:62}, {n:"A", m:69}, {n:"E", m:76}];
@@ -1618,17 +1639,20 @@ const dbReady = (async () => {
   if (!window.claude || typeof window.claude.use !== "function") return null;
   try { return await window.claude.use("db"); } catch (e) { return null; }
 })();
+const LOCAL_COLS = [];
 function collectionStore(name, localKey, onChange, onStatus){
   let api = null, items = [];
   dbReady.then(db => {
     if (!db){
+      // Each change is stamped, and removals are remembered for a while, so the Google Drive backup can merge two devices.
       items = store.get(localKey, []);
       const save = () => { store.set(localKey, items); onChange(items); };
       api = {
-        async add(x){ items.push(Object.assign({ id: "l" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5) }, x)); save(); },
-        async update(id, patch){ items = items.map(i => i.id === id ? Object.assign({}, i, patch) : i); save(); },
-        async remove(id){ items = items.filter(i => i.id !== id); save(); }
+        async add(x){ items.push(Object.assign({ id: "l" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5) }, x, { updatedAt: Date.now() })); save(); },
+        async update(id, patch){ items = items.map(i => i.id === id ? Object.assign({}, i, patch, { updatedAt: Date.now() }) : i); save(); },
+        async remove(id){ const gone = store.get(localKey + "Gone", {}); gone[id] = Date.now(); store.set(localKey + "Gone", gone); items = items.filter(i => i.id !== id); save(); }
       };
+      LOCAL_COLS.push({ key: localKey, reload(){ items = store.get(localKey, []); onChange(items); } });
       onStatus("local"); onChange(items); return;
     }
     const col = db.collection(name);
@@ -1724,8 +1748,11 @@ $("logForm").addEventListener("submit", async e => {
   }
   $("lSave").disabled = false;
 });
+let logMode = "";
 const logStore = collectionStore("practice", "log", items => { entries = items; renderLog(); stores.log = true; renderPlan(); }, st => {
-  $("storeInfo").textContent = st === "db" ? "Synced to your account" : st === "local" ? "Saved in this browser only" : "Lost connection to your log. Reload to reconnect.";
+  logMode = st;
+  if (st !== "local") $("storeInfo").textContent = st === "db" ? "Synced to your account" : "Lost connection to your log. Reload to reconnect.";
+  else renderBackup();
 });
 renderLog();
 
@@ -2741,8 +2768,71 @@ async function syncKeys(){
     await gUpload(meta, new Blob([JSON.stringify(data)], { type: "application/json" }), f && f.id);
   }
 }
+// Practice progress (log, repertoire, scale runs, ear-training scores) is one JSON file next to the pieces.
+// Both sides are merged rather than overwritten, so a session logged on the phone and one on the computer both survive.
+const PROGRESS_KEYS = ["scaleRuns", "ivStats", "pjCents"];
+let progQuiet = false;
+store.onSet = k => {
+  if (progQuiet) return;
+  if (PROGRESS_KEYS.includes(k)){ const at = store.get("progAt", {}); at[k] = Date.now(); store.set("progAt", at); }
+  if ((PROGRESS_KEYS.includes(k) || LOCAL_COLS.some(c => c.key === k)) && store.get("gOn", false) && G.token()) driveSoon();
+};
+function localProgress(){
+  const d = { v: 1, cols: {}, keys: {} }, at = store.get("progAt", {});
+  for (const c of LOCAL_COLS) d.cols[c.key] = { items: store.get(c.key, []), gone: store.get(c.key + "Gone", {}) };
+  for (const k of PROGRESS_KEYS){ const v = store.get(k, null); if (v != null) d.keys[k] = { at: at[k] || 0, v }; }
+  return d;
+}
+function mergeCol(a, b){
+  const gone = Object.assign({}, a.gone);
+  for (const [id, t] of Object.entries(b.gone || {})) gone[id] = Math.max(gone[id] || 0, t);
+  const byId = new Map();
+  for (const it of (a.items || []).concat(b.items || [])){ const o = byId.get(it.id); if (!o || (it.updatedAt || 0) > (o.updatedAt || 0)) byId.set(it.id, it); }
+  return { items: [...byId.values()].filter(it => !(gone[it.id] >= (it.updatedAt || 0))), gone };
+}
+function mergeProgress(a, b){
+  const out = { v: 1, cols: {}, keys: {} }, bc = b.cols || {}, bk = b.keys || {};
+  for (const k of new Set(Object.keys(a.cols).concat(Object.keys(bc)))) out.cols[k] = mergeCol(a.cols[k] || {}, bc[k] || {});
+  for (const k of new Set(Object.keys(a.keys).concat(Object.keys(bk)))){
+    const x = a.keys[k], y = bk[k];
+    if (!x || !y){ out.keys[k] = x || y; continue; }
+    if (k === "scaleRuns"){
+      // Runs from both devices, newest day first, without repeats.
+      const seen = new Set(), runs = x.v.concat(y.v).filter(r => { const j = JSON.stringify(r); return !seen.has(j) && seen.add(j); });
+      runs.sort((p, q) => String(q.d).localeCompare(String(p.d)));
+      out.keys[k] = { at: Math.max(x.at, y.at), v: runs.slice(0, 40) };
+    } else out.keys[k] = y.at > x.at ? y : x;
+  }
+  return out;
+}
+function applyProgress(d){
+  progQuiet = true;
+  try {
+    for (const [k, c] of Object.entries(d.cols)){ store.set(k, c.items); store.set(k + "Gone", c.gone); }
+    const at = store.get("progAt", {});
+    for (const [k, x] of Object.entries(d.keys)) if (PROGRESS_KEYS.includes(k)){ store.set(k, x.v); at[k] = x.at; }
+    store.set("progAt", at);
+  } finally { progQuiet = false; }
+  LOCAL_COLS.forEach(c => c.reload());
+  E.stats = store.get("ivStats", {}); renderIvStats();
+  P.cents = store.get("pjCents", 40); showPj();
+  renderScRuns();
+}
+async function syncProgress(folder, file){
+  if (logMode !== "local" || !LOCAL_COLS.length) return;
+  const mine = localProgress();
+  const theirs = file ? await gFetch(G.api + "files/" + file.id + "?alt=media").then(r => r.json()) : null;
+  const merged = theirs ? mergeProgress(mine, theirs) : mine, out = JSON.stringify(merged);
+  if (out !== JSON.stringify(mine)) applyProgress(merged);
+  if (!theirs || out !== JSON.stringify(theirs)){
+    const meta = { name: "Practice log backup.json", appProperties: { vprKind: "progress" } };
+    if (!file) meta.parents = [folder];
+    await gUpload(meta, new Blob([out], { type: "application/json" }), file && file.id);
+  }
+}
 async function syncDrive(){
-  if (G.busy || !store.get("gOn", false) || !G.token()) return renderSync();
+  if (G.busy){ G.again = true; return; }
+  if (!store.get("gOn", false) || !G.token()) return renderSync();
   G.busy = true; SH.syncMsg = ""; renderSync();
   try {
     if (store.get("gKeys", null) === true && !hasAppData()) SH.keyMsg = "To keep your keys in Google Drive, disconnect and connect Google Drive again so it can use the hidden app folder.";
@@ -2756,6 +2846,7 @@ async function syncDrive(){
       const r = await gFetch(G.api + "files?pageSize=1000&fields=nextPageToken,files(id,appProperties)&q=" + encodeURIComponent(q) + (page ? "&pageToken=" + page : "")).then(r => r.json());
       files = files.concat(r.files || []); page = r.nextPageToken || "";
     } while (page);
+    await syncProgress(folder, files.find(f => (f.appProperties || {}).vprKind === "progress"));
     const remote = new Map(), remotePhotos = new Map();
     for (const f of files){
       const a = f.appProperties || {}; if (!a.vprId) continue;
@@ -2783,8 +2874,8 @@ async function syncDrive(){
     store.set("gLast", Date.now());
     if (SH.pieceId && !$("shPieceV").hidden){ const p = await LIB.get(SH.pieceId); if (p && !p.deleted && p.abc !== $("shAbc").value && !SH.playing){ showPhotos((p.photos || []).map(asPhoto)); await setAbc(p.abc, false); pieceHeader(p); } }
   } catch (e) {
-    SH.syncMsg = e.signin ? "" : "Sync failed: " + (e.message || "network error") + ". Your pieces are safe on this device.";
-  } finally { G.busy = false; if (!$("shLibV").hidden) await renderLib(); renderSync(); }
+    SH.syncMsg = e.signin ? "" : "Sync failed: " + (e.message || "network error") + ". Everything is still safe on this device.";
+  } finally { G.busy = false; if (!$("shLibV").hidden) await renderLib(); renderSync(); if (G.again){ G.again = false; driveSoon(); } }
 }
 let driveT = 0;
 function driveSoon(){ clearTimeout(driveT); driveT = setTimeout(syncDrive, 800); }
@@ -2799,7 +2890,24 @@ function renderSync(){
   $("shSyncBtn").disabled = G.busy || !hasId;
   $("shSyncOff").hidden = !on;
   $("shGNote").hidden = hasId;
+  renderBackup();
 }
+function renderBackup(){
+  $("backupBox").hidden = logMode !== "local";
+  if (logMode !== "local") return;
+  const on = store.get("gOn", false), tok = G.token(), last = store.get("gLast", 0);
+  $("storeInfo").textContent = on ? "Backed up to Google Drive" : "Saved in this browser only";
+  $("backupState").textContent = SH.syncMsg && !G.busy ? SH.syncMsg : !on ? "Your log, repertoire, scale runs and ear-training scores are saved only in this browser, so clearing its data would lose them. Back them up to the \u201cViolin Practice Room\u201d folder in your Google Drive, next to your sheet music." :
+    G.busy ? "Backing up to Google Drive\u2026" : !tok ? "Google sign-in has expired. Tap Back up now to reconnect." :
+    last ? `Backed up to Google Drive ${ago(last)}. Changes are backed up as you go.` : "Connected to Google Drive.";
+  $("backupState").classList.toggle("bad", !!SH.syncMsg && !G.busy);
+  $("backupBtn").textContent = on ? "Back up now" : "Back up to Google Drive";
+  $("backupBtn").disabled = G.busy;
+}
+$("backupBtn").addEventListener("click", () => {
+  if (store.get("gOn", false) && G.token()) syncDrive();
+  else { store.set("gBack", "t-log"); googleSignIn(); }
+});
 $("shSyncBtn").addEventListener("click", () => {
   if (!G.clientId()){ document.getElementById("shGBox").open = true; return; }
   if (!G.token()) googleSignIn(); else syncDrive();
@@ -3038,8 +3146,11 @@ window.addEventListener("resize", () => {
     if (Math.abs($("shPaper").clientWidth - 18 - SH.width) > 40) renderSheet(false); else if (SH.full) paginate();
   }, 250);
 });
-if (takeGoogleToken()){ SH.fromGoogle = true; showTab("t-sheet"); }
-if (!$("p-sheet").hidden) sheetOpen();
+if (takeGoogleToken()){
+  if (store.get("gBack", "") === "t-log"){ store.set("gBack", ""); showTab("t-log"); }
+  else { SH.fromGoogle = true; showTab("t-sheet"); }
+}
+if (!$("p-sheet").hidden) sheetOpen(); else syncDrive();
 
 /* ---------- Today's plan ---------- */
 const PLAN_KEYS = [{ n: "G", pc: 7 }, { n: "D", pc: 2 }, { n: "A", pc: 9 }, { n: "C", pc: 0 }, { n: "F", pc: 5 }, { n: "B♭", pc: 10 }, { n: "E", pc: 4 }];
