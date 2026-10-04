@@ -6,7 +6,9 @@ A personal practice companion for learning the violin, in a single web page. It 
 
 ## Tools
 
-| Tab | What it does |
+The app has five tabs: **Today**, **Sheet music**, **Tools** (Tuner, Metronome, Drone), **Train** (Scales, Ear training, Fingerboard, Listen back with the posture check) and **Log**.
+
+| Tool | What it does |
 | --- | --- |
 | **Today** | Builds a timed practice plan (15–60 min) from your log, your pieces and your ear-training results. Each step opens the tool it needs. |
 | **Tuner** | Reference tones for G, D, A and E, plus a live cents meter from the microphone. |
@@ -17,8 +19,8 @@ A personal practice companion for learning the violin, in a single web page. It 
 | **Sheet music** | Photograph a page of music and Claude or Gemini Flash (your choice) transcribes it to ABC notation. A one-time setup asks for Google Drive (optional), the reader and its key. Pieces live in a library with folders. A piece opens with its notation and a play bar: violin or piano sound at any tempo, with a metronome count-in, click track or clicks only. Tap any note to start playing from that bar. Full screen splits the music into pages that fit the screen and turns them as it plays (or with the arrows or a swipe). It can also hand the tempo and time signature to the metronome and export a MIDI file. |
 | **Ear training** | Interval recognition (with a tune to remember each interval) and a sharp/flat/in-tune drill that narrows to the smallest pitch difference you can hear. |
 | **Listen back** | Open a recording: pitch trace and per-note intonation (cents sharp/flat), slow-down playback with A–B loop, and a rhythm check (tempo you played, rushing/dragging, evenness). |
-| **Posture** | Open a video of yourself playing (or use the camera): checks shoulder, head tilt, left wrist, bow path and bow elbow using on-device pose tracking. |
-| **Practice log** | Session timer, log with focus tags and notes, weekly chart, streak, and a repertoire tracker (current vs goal tempo). |
+| **Posture** (under Listen back) | Open a video of yourself playing (or use the camera): checks shoulder, head tilt, left wrist, bow path and bow elbow using on-device pose tracking. |
+| **Practice log** | Session timer, log with focus tags and notes, weekly chart, streak, and a repertoire tracker (current vs goal tempo). With Google Drive connected, the log, repertoire, scale runs and ear-training scores are backed up to `Practice log backup.json` in the app's Drive folder and merged across devices. |
 
 All audio analysis is plain signal processing (YIN pitch detection, onset detection). The posture tab uses Google's MediaPipe pose model, which runs entirely in the browser; no audio or video leaves your device.
 
@@ -37,9 +39,9 @@ Opening `index.html` directly from disk also works. In that case the posture tab
 
 Your log, repertoire and settings are stored in the browser's `localStorage`. Saved sheet-music pieces (notes, tempo and the original photos) are kept in the browser's IndexedDB. When the page runs as a Claude artifact, the log and repertoire sync to your account instead.
 
-## Google Drive sync for sheet music
+## Google Drive sync
 
-The sheet-music tab can sync your saved pieces to a "Violin Practice Room" folder in Google Drive, so they survive a reinstall and appear on every device. Sign-in is a plain OAuth redirect to Google and back, so no Google script runs on the page. The `drive.file` scope lets the app see only the files it created. If you tick "Keep my keys in Google Drive" under the API key, your Claude and Gemini keys are also kept in a `keys.json` in Drive's hidden app folder (the `drive.appdata` scope), so any device where you connect Google Drive gets them. Anyone who gets into your Google account could read them, so set a spending limit on each key.
+The app can sync your saved pieces and back up your practice log to a "Violin Practice Room" folder in Google Drive, so they survive a reinstall and appear on every device. Sign-in is a plain OAuth redirect to Google and back, so no Google script runs on the page. The `drive.file` scope lets the app see only the files it created. If you tick "Keep my keys in Google Drive" under the API key, your Claude and Gemini keys are also kept in a `keys.json` in Drive's hidden app folder (the `drive.appdata` scope), so any device where you connect Google Drive gets them. Anyone who gets into your Google account could read them, so set a spending limit on each key.
 
 One-time setup by the app's owner in [Google Cloud Console](https://console.cloud.google.com/):
 
