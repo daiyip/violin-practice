@@ -34,6 +34,9 @@ header.top{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:spac
 h1{font-family:var(--f-display);font-weight:400;font-size:clamp(26px,5vw,34px);margin:0;letter-spacing:-.01em}
 h1.brand{display:flex;align-items:center;gap:12px}
 h1.brand img{width:1.25em;height:1.25em;flex:none}
+/* The logo SVG follows the system theme; flip it when the page theme is forced the other way. */
+@media (prefers-color-scheme: dark){:root[data-theme="light"] h1.brand img{filter:invert(1)}}
+@media (prefers-color-scheme: light){:root[data-theme="dark"] h1.brand img{filter:invert(1)}}
 .pitchref{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}
 .pitchref select{font-family:var(--f-mono)}
 nav.tabs{display:flex;flex-wrap:nowrap;justify-content:space-between;gap:0;border-bottom:1px solid var(--line);margin-bottom:20px}
