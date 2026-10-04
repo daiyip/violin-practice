@@ -291,6 +291,9 @@ form .field>span{font-size:13px;color:var(--muted)}
 .paper svg{display:block}
 .paper .shstart{fill:var(--good);color:var(--good)}
 .paper .abcjs-note.hl,.paper .abcjs-rest.hl{fill:var(--accent);color:var(--accent)}
+.paper .sc-good{fill:var(--good);color:var(--good)}
+.paper .sc-warn{fill:var(--warn);color:var(--warn)}
+.paper .sc-bad{fill:var(--bad);color:var(--bad)}
 .shhead{display:flex;align-items:center;gap:10px}
 .btn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
 button.btn.icon,summary.btn.icon{padding:8px;min-width:40px;min-height:40px;justify-content:center;font-size:18px}
@@ -682,6 +685,8 @@ details>summary:hover{color:var(--ink)}
         <span class="small muted" id="shLoopInfo"></span>
         <button class="btn" id="shClean" hidden>Clean, +5 bpm</button>
       </div>
+      <label class="row small" style="gap:8px"><input type="checkbox" id="shScore"> Score my intonation <span class="muted">(listens through the microphone; the melody goes quiet so it only hears you)</span></label>
+      <div class="note" id="shScoreNote" hidden></div>
       <div class="shplay">
         <div class="row" style="gap:10px;flex-wrap:nowrap">
           <button class="btn primary big" id="shPlay" disabled>Play</button>
@@ -2267,7 +2272,7 @@ function loadAbcjs(){
 }
 const SH = { photos: [], pieceId: null, syncMsg: "", tune: null, synth: null, timer: null, playing: false, bpm: store.get("shBpm", 90),
   sound: store.get("shSound", "violin"), click: store.get("shClick", "count"), opened: false,
-  folder: store.get("shFolder", ""), start: null, startBar: 1, loop: store.get("shLoop", 0), reps: 0, full: false, pages: [0], linePage: {}, page: 0, curLine: -1, settings: false, returnTo: "lib" };
+  folder: store.get("shFolder", ""), start: null, startBar: 1, loop: store.get("shLoop", 0), score: store.get("shScoreOn", false), mic: null, sc: null, reps: 0, full: false, pages: [0], linePage: {}, page: 0, curLine: -1, settings: false, returnTo: "lib" };
 
 // Screens: "setup" (first run, and settings later), "lib" (folders and pieces), "scan" (new photos), "piece" (notation and player).
 function shView(v){
@@ -2985,7 +2990,8 @@ function stopSheet(keepCount){
   if (SH.timer) try { SH.timer.stop(); } catch (e) {}
   SH.synth = null; SH.timer = null; SH.playing = false; SH.curLine = -1; clearHl();
   playLabel("Play");
-  if (!keepCount){ SH.reps = 0; loopInfo(); }
+  scoreDone();
+  if (!keepCount){ SH.reps = 0; loopInfo(); if (SH.mic){ SH.mic.stop(); SH.mic = null; } }
 }
 
 // Where to start: tap a note. Notes are walked in the order they are written (first voice of the first staff).
@@ -3047,6 +3053,59 @@ function loopInfo(){
 }
 seg($("shLoop"), [0, 1, 2, 4, 8], SH.loop, v => { SH.loop = v; store.set("shLoop", v); SH.reps = 0; loopInfo(); restartSheet(); }, v => v ? v + (v === 1 ? " bar" : " bars") : "Off");
 loopInfo();
+// Scoring: while the piece plays (melody muted), the microphone's pitch during each written note is compared with that
+// note. Each note gets the median of its readings, skipping the first 80 ms of the bow stroke.
+$("shScore").checked = SH.score;
+$("shScore").addEventListener("change", e => { SH.score = e.target.checked; store.set("shScoreOn", SH.score); if (SH.playing){ stopSheet(); playSheet(); } });
+async function scoreStart(){
+  SH.sc = { notes: [], cur: null, fresh: true };
+  if (SH.mic) return;
+  try {
+    SH.mic = await listen(f => {
+      const c = SH.sc && SH.sc.cur; if (!c || !f || performance.now() - c.t0 < 80) return;
+      let d = hzToMidi(f) - c.pitch; d -= 12 * Math.round(d / 12);   // an octave slip by the pitch tracker isn't a wrong note
+      c.cents.push(d * 100);
+    });
+    $("shScoreNote").hidden = false; $("shScoreNote").className = "note"; $("shScoreNote").textContent = "Listening. Play along after the count-in.";
+  } catch (e) {
+    SH.sc = null; $("shScoreNote").hidden = false; $("shScoreNote").className = "note bad";
+    $("shScoreNote").textContent = location.protocol === "https:" || location.hostname === "localhost" ? "The microphone is blocked. Allow it for this site, then try again." : MIC_BLOCKED;
+  }
+}
+function scoreNote(ev, els){
+  const S = SH.sc; if (S.cur) S.notes.push(S.cur);
+  // The last time's colours stay on the music until this time's first note.
+  if (S.fresh){ S.fresh = false; $("shPaper").querySelectorAll(".sc-good,.sc-warn,.sc-bad").forEach(el => el.classList.remove("sc-good", "sc-warn", "sc-bad")); }
+  const p = (ev.midiPitches || []).find(m => m.instrument !== 128);
+  S.cur = p ? { pitch: p.pitch, els, t0: performance.now(), cents: [] } : null;
+}
+function scoreDone(){
+  const S = SH.sc; if (!S) return;
+  if (S.cur){ S.notes.push(S.cur); S.cur = null; }
+  if (!S.notes.length) return;
+  const med = a => { const b = [...a].sort((x, y) => x - y); return b[b.length >> 1]; };
+  const heard = [];
+  for (const n of S.notes){
+    if (n.cents.length < 2) continue;
+    n.c = med(n.cents); heard.push(n);
+    const cls = Math.abs(n.c) <= 10 ? "sc-good" : Math.abs(n.c) <= 25 ? "sc-warn" : "sc-bad";
+    n.els.forEach(el => el.classList.add(cls));
+  }
+  const bar = n => { const m = n.els.map(el => /\babcjs-mm(\d+)\b/.exec(el.getAttribute("class") || "")).find(Boolean); return m ? +m[1] + 1 : null; };
+  // More than a quarter tone out counts as a different note, not as out of tune.
+  const near = heard.filter(n => Math.abs(n.c) <= 50), good = near.filter(n => Math.abs(n.c) <= 10).length;
+  const avg = near.reduce((s, n) => s + Math.abs(n.c), 0) / (near.length || 1);
+  const where = n => (bar(n) ? "bar " + bar(n) + " " : "") + noteName(n.pitch);
+  const worst = heard.filter(n => Math.abs(n.c) > 10).sort((a, b) => (Math.abs(a.c) > 50) - (Math.abs(b.c) > 50) || Math.abs(b.c) - Math.abs(a.c)).slice(0, 3)
+    .map(n => Math.abs(n.c) > 50 ? where(n) + " sounded like " + noteName(n.pitch + Math.round(n.c / 100)) : where(n) + ", " + Math.round(Math.abs(n.c)) + "\u00a2 " + (n.c > 0 ? "sharp" : "flat"));
+  const miss = S.notes.length - heard.length;
+  $("shScoreNote").hidden = false; $("shScoreNote").className = "note";
+  $("shScoreNote").textContent = !heard.length ? "No notes were heard. Play closer to the phone, or turn the phone's volume down so the clicks don't drown you out." :
+    `${SH.reps ? "Time " + SH.reps + ": " : ""}${good} of ${heard.length} notes in tune (within 10\u00a2)` + (near.length ? `, ${Math.round(avg)}\u00a2 off on average.` : ".") +
+    (worst.length ? " Most off: " + worst.join("; ") + "." : "") + (miss ? ` ${miss} note${miss === 1 ? " wasn't" : "s weren't"} heard.` : "") +
+    " Green is in tune, amber within 25\u00a2, red further off.";
+  SH.sc = SH.playing ? { notes: [], cur: null } : null;
+}
 // After a clean time through, the next one goes 5 bpm faster.
 $("shClean").addEventListener("click", () => {
   setShBpm(SH.bpm + 5);
@@ -3077,7 +3136,8 @@ function restartSheet(){
 async function playSheet(){
   if (!SH.tune) return;
   const c = audio();   // created inside the tap so iPhone allows sound
-  const A = window.ABCJS, tune = SH.tune, mode = SH.click;
+  const A = window.ABCJS, tune = SH.tune, mode = SH.score && SH.click === "off" ? "count" : SH.click;
+  if (SH.score) await scoreStart();
   const beats = Math.max(1, Math.round(tune.getBeatsPerMeasure())), intro = mode === "off" ? 0 : 1;
   const opts = { program: SH.sound === "piano" ? 0 : 40, qpm: SH.bpm, onEnded: () => {
     if (SH.synth !== synth) return;
@@ -3089,7 +3149,7 @@ async function playSheet(){
     opts.drumBars = 1; opts.drumIntro = 1;
     if (mode === "count") opts.drumOff = true;
   }
-  if (mode === "only") opts.sequenceCallback = tracks => tracks.forEach(t => t.forEach(ev => { if (ev.cmd === "note" && ev.instrument !== 128) ev.volume = 0; }));
+  if (mode === "only" || SH.score) opts.sequenceCallback = tracks => tracks.forEach(t => t.forEach(ev => { if (ev.cmd === "note" && ev.instrument !== 128) ev.volume = 0; }));
   let play = tune, map = null;
   if (SH.start || SH.loop){
     const cut = sliceAbc($("shAbc").value, SH.start && SH.start.char, loopEnd(tune));
@@ -3111,6 +3171,7 @@ async function playSheet(){
   SH.timer = new A.TimingCallbacks(play, { qpm: SH.bpm, extraMeasuresAtBeginning: intro, eventCallback: ev => {
     clearHl(); if (!ev) return;
     const els = map ? (ev.startCharArray || []).flatMap(ch => map.get(ch) || []) : (ev.elements || []).flat();
+    if (SH.sc) scoreNote(ev, els);
     els.forEach(el => el.classList.add("hl"));
     if (els[0]) follow(els[0]);
   } });
