@@ -677,6 +677,11 @@ details>summary:hover{color:var(--ink)}
       <div class="note" id="shWarn" hidden></div>
       <div class="note" id="shReadNote" style="white-space:pre-line" hidden></div>
       <div class="small muted" id="shStartNote">Tap any note to start playing from there.</div>
+      <div class="row" id="shLoopRow" style="gap:8px">
+        <span class="small muted">Loop</span><div class="seg" id="shLoop" aria-label="Loop a passage"></div>
+        <span class="small muted" id="shLoopInfo"></span>
+        <button class="btn" id="shClean" hidden>Clean, +5 bpm</button>
+      </div>
       <div class="shplay">
         <div class="row" style="gap:10px;flex-wrap:nowrap">
           <button class="btn primary big" id="shPlay" disabled>Play</button>
@@ -2262,7 +2267,7 @@ function loadAbcjs(){
 }
 const SH = { photos: [], pieceId: null, syncMsg: "", tune: null, synth: null, timer: null, playing: false, bpm: store.get("shBpm", 90),
   sound: store.get("shSound", "violin"), click: store.get("shClick", "count"), opened: false,
-  folder: store.get("shFolder", ""), start: null, full: false, pages: [0], linePage: {}, page: 0, curLine: -1, settings: false, returnTo: "lib" };
+  folder: store.get("shFolder", ""), start: null, startBar: 1, loop: store.get("shLoop", 0), reps: 0, full: false, pages: [0], linePage: {}, page: 0, curLine: -1, settings: false, returnTo: "lib" };
 
 // Screens: "setup" (first run, and settings later), "lib" (folders and pieces), "scan" (new photos), "piece" (notation and player).
 function shView(v){
@@ -2975,11 +2980,12 @@ seg($("shClick"), ["off", "count", "on", "only"], SH.click, v => { SH.click = v;
   v => ({ off: "Off", count: "Count in", on: "On", only: "Clicks only" })[v]);
 function clearHl(){ $("shPaper").querySelectorAll(".hl").forEach(el => el.classList.remove("hl")); }
 const playLabel = t => { $("shPlay").textContent = t; $("shFsPlay").textContent = t; };
-function stopSheet(){
+function stopSheet(keepCount){
   if (SH.synth) try { SH.synth.stop(); } catch (e) {}
   if (SH.timer) try { SH.timer.stop(); } catch (e) {}
   SH.synth = null; SH.timer = null; SH.playing = false; SH.curLine = -1; clearHl();
   playLabel("Play");
+  if (!keepCount){ SH.reps = 0; loopInfo(); }
 }
 
 // Where to start: tap a note. Notes are walked in the order they are written (first voice of the first staff).
@@ -3003,23 +3009,50 @@ function markStart(){
   });
   if (hit && hit.abselem) (hit.abselem.elemset || []).forEach(e => e.classList.add("shstart"));
   if (!hit) SH.start = null;
+  SH.startBar = hit ? bar : 1; loopInfo();
   $("shStartNote").innerHTML = hit ? `Playing starts at bar ${bar}, at the green note. <button class="linkbtn" id="shFromTop">Start from the beginning</button>` :
     "Tap any note to start playing from there.";
 }
 $("shStartNote").addEventListener("click", e => { if (e.target.id === "shFromTop"){ SH.start = null; markStart(); if (SH.playing){ stopSheet(); playSheet(); } } });
 // To start part-way through, the audio comes from a copy of the tune cut at the start of that bar (keeping the header and any
 // later key or meter changes), so the count-in still works; highlights are mapped back onto the full drawing by text position.
-function sliceAbc(abc, char){
+// With an end position (looping a few bars) the copy also stops there.
+function sliceAbc(abc, char, end){
   const k = /^K:.*$/m.exec(abc); if (!k) return null;
   const hEnd = k.index + k[0].length + 1;
-  let i = char;
+  let i = Math.max(hEnd, char == null ? hEnd : char);
   while (i > hEnd && abc[i - 1] !== "|" && abc[i - 1] !== "\n" && !(abc[i - 1] === ":" && abc[i - 2] === "|")) i--;
   while (/[0-9]/.test(abc[i] || "") && abc[i - 1] === "|") i++;   // "|2" volta numbers
-  if (i <= hEnd) return null;
+  if (i <= hEnd && end == null) return null;
   const fields = abc.slice(hEnd, i).split("\n").filter(l => /^[MLK]:/.test(l));
   const head = abc.slice(0, hEnd) + (fields.length ? fields.join("\n") + "\n" : "");
-  return { abc: head + abc.slice(i), from: i };
+  return { abc: head + abc.slice(i, end == null ? undefined : end), from: i };
 }
+// Where a loop of SH.loop bars starting at the start note (or the top) ends: just after its last bar line.
+function loopEnd(tune){
+  if (!SH.loop) return null;
+  let hit = null, n = 0, prevBar = false, end = null;
+  eachNote(tune, el => {
+    if (!hit){ if (el.el_type === "note" && (!SH.start || el.startChar >= SH.start.char)) hit = el; return; }
+    if (el.el_type === "bar" && !prevBar && ++n >= SH.loop){ end = el.endChar; return false; }
+    prevBar = el.el_type === "bar";
+  });
+  return end;
+}
+function loopInfo(){
+  const on = !!SH.loop;
+  $("shClean").hidden = !on;
+  $("shLoopInfo").textContent = !on ? "" : (SH.loop === 1 ? "Bar " + SH.startBar : `Bars ${SH.startBar}\u2013${SH.startBar + SH.loop - 1}`) +
+    (SH.reps ? ` \u00b7 time ${SH.reps + 1}` : "");
+}
+seg($("shLoop"), [0, 1, 2, 4, 8], SH.loop, v => { SH.loop = v; store.set("shLoop", v); SH.reps = 0; loopInfo(); restartSheet(); }, v => v ? v + (v === 1 ? " bar" : " bars") : "Off");
+loopInfo();
+// After a clean time through, the next one goes 5 bpm faster.
+$("shClean").addEventListener("click", () => {
+  setShBpm(SH.bpm + 5);
+  $("shClean").textContent = "Next time at " + SH.bpm; clearTimeout(SH.cleanT);
+  SH.cleanT = setTimeout(() => { $("shClean").textContent = "Clean, +5 bpm"; }, 2500);
+});
 // Pairs each note of the cut copy with the drawn note it came from, by order (text positions can differ by a space).
 function noteMap(full, cut, from){
   const a = [], b = [], m = new Map();
@@ -3039,14 +3072,18 @@ function follow(el){
 let shRestartT = 0;
 function restartSheet(){
   if (!SH.playing) return;
-  clearTimeout(shRestartT); shRestartT = setTimeout(() => { stopSheet(); playSheet(); }, 350);
+  clearTimeout(shRestartT); shRestartT = setTimeout(() => { stopSheet(true); playSheet(); }, 350);
 }
 async function playSheet(){
   if (!SH.tune) return;
   const c = audio();   // created inside the tap so iPhone allows sound
   const A = window.ABCJS, tune = SH.tune, mode = SH.click;
   const beats = Math.max(1, Math.round(tune.getBeatsPerMeasure())), intro = mode === "off" ? 0 : 1;
-  const opts = { program: SH.sound === "piano" ? 0 : 40, qpm: SH.bpm, onEnded: () => { if (SH.synth === synth) stopSheet(); } };
+  const opts = { program: SH.sound === "piano" ? 0 : 40, qpm: SH.bpm, onEnded: () => {
+    if (SH.synth !== synth) return;
+    // Looping: go round again (with the count-in bar as a breath), at whatever tempo is set now.
+    if (SH.loop){ SH.reps++; loopInfo(); stopSheet(true); playSheet(); } else stopSheet();
+  } };
   if (mode !== "off"){
     opts.drum = "d".repeat(beats) + " " + [76].concat(Array(beats - 1).fill(77)).join(" ") + " " + [110].concat(Array(beats - 1).fill(70)).join(" ");
     opts.drumBars = 1; opts.drumIntro = 1;
@@ -3054,8 +3091,8 @@ async function playSheet(){
   }
   if (mode === "only") opts.sequenceCallback = tracks => tracks.forEach(t => t.forEach(ev => { if (ev.cmd === "note" && ev.instrument !== 128) ev.volume = 0; }));
   let play = tune, map = null;
-  if (SH.start){
-    const cut = sliceAbc($("shAbc").value, SH.start.char);
+  if (SH.start || SH.loop){
+    const cut = sliceAbc($("shAbc").value, SH.start && SH.start.char, loopEnd(tune));
     let host = $("shCut"); if (!host){ host = document.createElement("div"); host.id = "shCut"; host.style.cssText = "position:absolute;left:-10000px;top:0;width:800px;visibility:hidden"; document.body.appendChild(host); }
     const t2 = cut && A.renderAbc(host, cut.abc, {})[0];
     if (t2 && t2.lines && t2.lines.some(l => l.staff)){ play = t2; map = noteMap(tune, t2, cut.from); }
