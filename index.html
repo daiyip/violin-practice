@@ -299,6 +299,16 @@ form .field>span{font-size:13px;color:var(--muted)}
 .tklist .tk .acts button{font-size:12.5px;padding:5px 9px}
 .tkpair{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
 .tkpair figure{margin:0}.tkpair figcaption{font-size:12px;color:var(--muted);margin-top:4px}
+.mirror{position:relative;background:#000;border-radius:var(--r);overflow:hidden;aspect-ratio:3/4;max-height:70vh;width:100%;margin-inline:auto}
+@media (min-width:700px){.mirror{aspect-ratio:4/3}}
+.mirror video{width:100%;height:100%;object-fit:cover;display:block}
+.mirror.flip video{transform:scaleX(-1)}
+.mirror svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;display:none}
+.mirror.grid svg{display:block}
+.mirror svg line{stroke:rgba(255,255,255,.55);stroke-width:.25;vector-effect:non-scaling-stroke;stroke-dasharray:4 4}
+.mirror .ph{position:absolute;inset:0;display:grid;place-items:center;color:#bbb;font-size:14px;text-align:center;padding:20px}
+.mirror.full{position:fixed;inset:0;z-index:50;max-height:none;border-radius:0;aspect-ratio:auto}
+.mirror .mirexit{position:absolute;top:calc(env(safe-area-inset-top,0px) + 10px);right:10px;z-index:2;background:rgba(0,0,0,.5);color:#fff;border-color:transparent}
 .paper .sc-good{fill:var(--good);color:var(--good)}
 .paper .sc-warn{fill:var(--warn);color:var(--warn)}
 .paper .sc-bad{fill:var(--bad);color:var(--bad)}
@@ -382,6 +392,7 @@ details>summary:hover{color:var(--ink)}
     <button role="tab" id="t-ear" data-group="t-train" aria-controls="p-ear" aria-selected="false" hidden>Ear</button>
     <button role="tab" id="t-board" data-group="t-train" aria-controls="p-board" aria-selected="false" hidden>Fingerboard</button>
     <button role="tab" id="t-listen" data-group="t-train" aria-controls="p-listen" aria-selected="false" hidden>Listen back</button>
+    <button role="tab" id="t-mirror" data-group="t-train" aria-controls="p-mirror" aria-selected="false" hidden>Mirror</button>
   </div>
 
   <!-- TODAY -->
@@ -808,6 +819,29 @@ details>summary:hover{color:var(--ink)}
     </div>
   </section>
 
+  <!-- MIRROR -->
+  <section id="p-mirror" role="tabpanel" aria-labelledby="t-mirror" class="stack" hidden>
+    <div>
+      <h2>Mirror</h2>
+      <p class="lede">The front camera as a mirror. Prop the phone up at chest height an arm's length or two away, and check your stance, violin hold and bow arm as you play. Nothing is recorded.</p>
+    </div>
+    <div class="mirror" id="mirBox">
+      <video id="mirVid" playsinline muted autoplay></video>
+      <svg id="mirGuides" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+        <line x1="50" y1="0" x2="50" y2="100"/><line x1="0" y1="33.3" x2="100" y2="33.3"/><line x1="0" y1="66.7" x2="100" y2="66.7"/>
+      </svg>
+      <div class="ph" id="mirPh">Press Start to open the camera.</div>
+      <button class="btn icon mirexit" id="mirExit" aria-label="Exit full screen" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="row">
+      <button class="btn primary" id="mirBtn">Start</button>
+      <button class="btn" id="mirFull">Full screen</button>
+      <label class="row small"><input type="checkbox" id="mirFlip" checked> Mirror image</label>
+      <label class="row small"><input type="checkbox" id="mirGrid"> Guide lines</label>
+    </div>
+    <p class="small muted" id="mirNote" style="margin:0">Guide lines help you check that your head, shoulders and scroll stay level, and that the bow crosses the strings straight.</p>
+  </section>
+
   <!-- POSTURE -->
   <section id="p-posture" role="tabpanel" aria-labelledby="t-listen" class="stack" hidden>
     <div>
@@ -994,9 +1028,10 @@ function showTab(id){
   if (inGroup.length) store.set("sec:" + group, pick);
   store.set("tab", pick);
   if (pick === "t-listen"){ drawPlot(); drawRhythm(); }
+  if (pick !== "t-mirror" && typeof mirrorStop === "function") mirrorStop();
 }
 tabs.concat(subs).forEach(t => t.addEventListener("click", () => showTab(t.id)));
-const hashTab = { today:"t-today", tools:"t-tools", train:"t-train", tuner:"t-tune", metronome:"t-metro", drone:"t-drone", fingerboard:"t-board", scales:"t-scale", sheet:"t-sheet", ear:"t-ear", listen:"t-listen", posture:"t-listen", log:"t-log" }[location.hash.slice(1)];
+const hashTab = { today:"t-today", tools:"t-tools", train:"t-train", tuner:"t-tune", metronome:"t-metro", drone:"t-drone", fingerboard:"t-board", scales:"t-scale", sheet:"t-sheet", ear:"t-ear", listen:"t-listen", posture:"t-listen", mirror:"t-mirror", log:"t-log" }[location.hash.slice(1)];
 showTab(hashTab || ({ "t-posture": "t-listen" })[store.get("tab", "")] || store.get("tab", "t-today"));
 
 /* ---------- Tuner ---------- */
@@ -3517,6 +3552,34 @@ if (takeGoogleToken()){
 }
 if (!$("p-sheet").hidden) sheetOpen(); else syncDrive();
 
+/* ---------- Mirror ---------- */
+var mirStream = null;   // var: showTab may call mirrorStop before this line runs
+function mirrorStop(){
+  if (!mirStream) return;
+  mirStream.getTracks().forEach(t => t.stop()); mirStream = null; $("mirVid").srcObject = null;
+  $("mirBtn").textContent = "Start"; $("mirPh").hidden = false; mirrorFull(false);
+}
+function mirrorFull(on){
+  $("mirBox").classList.toggle("full", on); $("mirExit").hidden = !on; document.body.classList.toggle("shfull", on);
+}
+$("mirBtn").addEventListener("click", async () => {
+  if (mirStream){ mirrorStop(); return; }
+  try {
+    mirStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+  } catch (e) {
+    $("mirNote").textContent = location.protocol === "https:" || location.hostname === "localhost" ? "The camera is blocked. Allow it for this site, then try again." : "This view can't use your camera. Open the app at violin.daiyip.com in Chrome or Safari.";
+    return;
+  }
+  $("mirVid").srcObject = mirStream; $("mirBtn").textContent = "Stop"; $("mirPh").hidden = true;
+});
+$("mirFull").addEventListener("click", () => { mirrorFull(true); if (!mirStream) $("mirBtn").click(); });
+$("mirExit").addEventListener("click", () => mirrorFull(false));
+$("mirFlip").checked = store.get("mirFlip", true); $("mirGrid").checked = store.get("mirGrid", false);
+const mirOpts = () => { $("mirBox").classList.toggle("flip", $("mirFlip").checked); $("mirBox").classList.toggle("grid", $("mirGrid").checked);
+  store.set("mirFlip", $("mirFlip").checked); store.set("mirGrid", $("mirGrid").checked); };
+$("mirFlip").addEventListener("change", mirOpts); $("mirGrid").addEventListener("change", mirOpts); mirOpts();
+document.addEventListener("visibilitychange", () => { if (document.hidden) mirrorStop(); });
+
 /* ---------- Automatic practice log ---------- */
 // Every 5 seconds, if a tool is sounding or listening (and the app was touched in the last 10 minutes), that time is
 // counted towards what is being practised. Each device keeps one log entry per day ("a-<date>-<device>"), written every
@@ -3534,9 +3597,10 @@ function autoWhat(){
   if (D.on) return "Drone";
   if (mic) return "Tuning";
   if (M.running) return "Metronome";
+  if (mirStream) return "Mirror";
   return null;
 }
-const AUTO_FOCUS = { Scales: "Scales", Drone: "Intonation", Tuning: "Intonation", "Ear training": "Intonation", "Listen back": null, Metronome: null };
+const AUTO_FOCUS = { Scales: "Scales", Drone: "Intonation", Tuning: "Intonation", "Ear training": "Intonation", "Listen back": null, Metronome: null, Mirror: "Bowing" };
 function autoDay(){ const d = store.get("autoDay", null); return d && d.date ? d : { date: today(), secs: {} }; }
 async function autoWrite(day){
   if (logMode !== "local" || !logStore.api) return false;
