@@ -6,7 +6,7 @@ A personal practice companion for learning the violin, in a single web page. It 
 
 ## Tools
 
-The **Install app** button at the top shows how to add the app to the iPhone or iPad home screen, the Mac Dock (Safari) or as a Chrome or Edge app, picked for the device and browser in use. It is hidden once the app runs installed. `manifest.webmanifest` gives the installed app its name, icon and full-screen display.
+The **Install app** button at the top shows how to add the app to the iPhone or iPad home screen, the Mac Dock (Safari) or as a Chrome or Edge app, picked for the device and browser in use. It is hidden once the app runs installed, or after "Don't show again" in that browser. `manifest.webmanifest` gives the installed app its name, icon and full-screen display.
 
 The app has five tabs: **Today**, **Sheet music**, **Tools** (Tuner, Metronome, Drone), **Train** (Scales, Ear training, Fingerboard, Listen back with the posture check, Mirror) and **Log**.
 

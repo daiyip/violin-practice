@@ -406,7 +406,7 @@ details>summary:hover{color:var(--ink)}
       <ol class="inststeps" id="instSteps"></ol>
       <p class="note" id="instData" hidden>The installed app keeps its own storage, separate from the browser. Open <b>Log → Backup</b> in the app and connect Google Drive to bring over your log, pieces and recordings.</p>
       <details class="small" id="instOther"><summary>Steps for other devices</summary><div id="instOtherList"></div></details>
-      <div class="row" style="justify-content:flex-end"><button class="btn primary" type="button" id="instNow" hidden>Install now</button><button class="btn" value="close">Close</button></div>
+      <div class="row" style="justify-content:space-between"><button class="btn" value="hide" id="instHide" title="Hide the Install app button in this browser">Don't show again</button><span class="row"><button class="btn primary" type="button" id="instNow" hidden>Install now</button><button class="btn" value="close">Close</button></span></div>
     </form>
   </dialog>
 
@@ -3857,7 +3857,7 @@ function instOpen(){
 (function instInit(){
   const installed = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
   let framed = false; try{ framed = window.top !== window; }catch(e){ framed = true; }
-  if (installed || framed || !$("instDlg").showModal) return;
+  if (installed || framed || !$("instDlg").showModal || store.get("instHide", false)) return;
   $("instBtn").hidden = false;
   $("instBtn").addEventListener("click", instOpen);
   addEventListener("beforeinstallprompt", e => { e.preventDefault(); INST.evt = e; });
@@ -3866,6 +3866,7 @@ function instOpen(){
     INST.evt.prompt(); const r = await INST.evt.userChoice.catch(() => null); INST.evt = null;
     if (r && r.outcome === "accepted") $("instDlg").close();
   });
+  $("instDlg").addEventListener("close", () => { if ($("instDlg").returnValue === "hide"){ store.set("instHide", true); $("instBtn").hidden = true; } });
   addEventListener("appinstalled", () => { $("instBtn").hidden = true; if ($("instDlg").open) $("instDlg").close(); });
 })();
 })();
