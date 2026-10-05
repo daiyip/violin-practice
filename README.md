@@ -6,6 +6,8 @@ A personal practice companion for learning the violin, in a single web page. It 
 
 ## Tools
 
+The **Install app** button at the top shows how to add the app to the iPhone or iPad home screen, the Mac Dock (Safari) or as a Chrome or Edge app, picked for the device and browser in use. It is hidden once the app runs installed, or after "Don't show again" in that browser. `manifest.webmanifest` gives the installed app its name, icon and full-screen display.
+
 The app has five tabs: **Today**, **Sheet music**, **Tools** (Tuner, Metronome, Drone), **Train** (Scales, Ear training, Fingerboard, Listen back with the posture check, Mirror) and **Log**.
 
 | Tool | What it does |
@@ -60,6 +62,7 @@ While the consent screen is in Testing, only the listed test users can sign in. 
 - `index.html` contains the whole app: HTML, CSS and JavaScript.
 - `pose/` holds MediaPipe Tasks Vision 0.10.14 (Apache 2.0) and the `pose_landmarker_lite` model, stored base64-encoded as `.b64.txt`.
 - `abcjs/` holds abcjs 6.7.1 (MIT), which draws and plays the sheet-music tab's notation.
+- `manifest.webmanifest` describes the installed app (name, icons, standalone display).
 - `icons/` holds the logo: `logo.svg` (browser tab and page header; a transparent violin that turns white in dark mode) and PNGs for the iPhone home screen (`icon-180.png`) and other sizes.
 - `anthropic/sdk.min.mjs` is the Anthropic TypeScript SDK 0.131.0 (MIT) built as a single browser ES module for the sheet-music tab. To rebuild it for a newer version:
 
