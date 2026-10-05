@@ -8,6 +8,9 @@
 <link rel="icon" href="icons/icon-32.png" sizes="32x32" type="image/png">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <meta name="apple-mobile-web-app-title" content="Violin">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
@@ -32,6 +35,14 @@ body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1
 .wrap{max-width:900px;margin:0 auto;padding-inline:16px;padding-block:20px 48px}
 header.top{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 20px;margin-bottom:16px}
 h1{font-family:var(--f-display);font-weight:400;font-size:clamp(26px,5vw,34px);margin:0;letter-spacing:-.01em}
+header.top .install{align-self:center;padding:6px 12px;font-size:13px}
+dialog#instDlg{border:1px solid var(--line);border-radius:var(--r);background:var(--surface);color:var(--ink);width:min(440px,calc(100vw - 32px));padding:20px}
+dialog#instDlg::backdrop{background:rgba(0,0,0,.45)}
+.inststeps{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:8px}
+.inststeps svg{vertical-align:-3px}
+#instOther summary{cursor:pointer;color:var(--muted)}
+#instOther h4{margin:12px 0 4px;font-size:13px}
+#instOther ol{margin:0;padding-left:20px}
 h1.brand{display:flex;align-items:center;gap:12px}
 h1.brand img{width:1.25em;height:1.25em;flex:none}
 /* The logo SVG follows the system theme; flip it when the page theme is forced the other way. */
@@ -385,7 +396,19 @@ details>summary:hover{color:var(--ink)}
     <label class="pitchref" for="aref">Concert pitch A =
       <select id="aref"><option>438</option><option>440</option><option>441</option><option>442</option><option>443</option></select> Hz
     </label>
+    <button class="btn install" id="instBtn" hidden><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3v12m0 0-4.5-4.5M12 15l4.5-4.5M4 17v3h16v-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span id="instLbl">Install app</span></button>
   </header>
+  <dialog id="instDlg" aria-labelledby="instTitle">
+    <form method="dialog" class="stack">
+      <h2 id="instTitle">Install the app</h2>
+      <p class="small muted" id="instWhy" style="margin:0">It gets its own icon and opens full screen, without the browser bar.</p>
+      <b class="small" id="instFor"></b>
+      <ol class="inststeps" id="instSteps"></ol>
+      <p class="note" id="instData" hidden>The installed app keeps its own storage, separate from the browser. Open <b>Log → Backup</b> in the app and connect Google Drive to bring over your log, pieces and recordings.</p>
+      <details class="small" id="instOther"><summary>Steps for other devices</summary><div id="instOtherList"></div></details>
+      <div class="row" style="justify-content:flex-end"><button class="btn primary" type="button" id="instNow" hidden>Install now</button><button class="btn" value="close">Close</button></div>
+    </form>
+  </dialog>
 
   <nav class="tabs" role="tablist" aria-label="Sections">
     <button role="tab" id="t-today" aria-controls="p-today" aria-selected="true" title="Today"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4M9 14.5l2 2 4-4"/></svg><span class="tl">Today</span></button>
@@ -3800,6 +3823,51 @@ $("planLog").addEventListener("click", () => {
   showTab("t-log"); $("logForm").scrollIntoView({ block: "start" });
   $("lStatus").textContent = "Filled in from today's plan. Add a note, then save.";
 });
+
+// Install as an app: steps for the device and browser in use. Chrome and Edge can show their own prompt.
+const INST = { evt: null };
+const SHARE = `<svg viewBox="0 0 24 24" width="16" height="16" aria-label="Share"><path d="M12 3v12M8 7l4-4 4 4M7 11H5v10h14V11h-2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const INST_STEPS = {
+  "ios-safari": ["iPhone or iPad (Safari)", [`Tap the Share button ${SHARE} in the toolbar.`, "Scroll down and tap <b>Add to Home Screen</b>.", "Tap <b>Add</b>. The violin icon appears on your home screen."]],
+  "ios-other": ["iPhone or iPad (Chrome, Edge, Firefox)", [`Tap the Share button ${SHARE}. In Chrome it's at the right of the address bar.`, "Tap <b>Add to Home Screen</b>, then <b>Add</b>.", "If it's not in the list, open violin.daiyip.com in Safari and add it from there."]],
+  "mac-safari": ["Mac (Safari)", ["In the menu bar, choose <b>File → Add to Dock…</b> (or the Share button, then <b>Add to Dock</b>).", "Click <b>Add</b>. The app appears in the Dock and in Applications.", "This needs macOS Sonoma or later."]],
+  "chrome": ["Mac, Windows or Android (Chrome)", ["Open the ⋮ menu at the top right.", "Choose <b>Cast, save and share → Install page as app…</b> (on Android: <b>Add to Home screen</b> or <b>Install app</b>).", "Click <b>Install</b>."]],
+  "edge": ["Mac or Windows (Edge)", ["Open the ⋯ menu at the top right.", "Choose <b>Apps → Install this site as an app</b>.", "Click <b>Install</b>."]],
+  "firefox": ["Firefox", ["Firefox can't install websites as apps.", "Open violin.daiyip.com in Safari (Mac, iPhone) or Chrome, then follow the steps for that browser."]]
+};
+function instPlatform(){
+  const ua = navigator.userAgent, ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  if (ios) return /CriOS|FxiOS|EdgiOS|OPiOS/.test(ua) ? "ios-other" : "ios-safari";
+  if (/Firefox\//.test(ua)) return "firefox";
+  if (/Edg\//.test(ua)) return "edge";
+  if (/Chrome\/|Chromium\//.test(ua)) return "chrome";
+  if (/Macintosh/.test(ua) && /Safari\//.test(ua)) return "mac-safari";
+  return "chrome";
+}
+const instList = steps => `<ol>${steps.map(x => `<li>${x}</li>`).join("")}</ol>`;
+function instOpen(){
+  const p = instPlatform(), [name, steps] = INST_STEPS[p];
+  $("instFor").textContent = name;
+  $("instSteps").innerHTML = (INST.evt ? ["Click <b>Install now</b> below, or:"] : []).concat(steps).map(x => `<li>${x}</li>`).join("");
+  $("instNow").hidden = !INST.evt;
+  $("instData").hidden = !/^(ios|mac-safari)/.test(p); // Safari web apps don't share the browser's site data
+  $("instOtherList").innerHTML = Object.entries(INST_STEPS).filter(([k]) => k !== p).map(([, [n, s]]) => `<h4>${n}</h4>${instList(s)}`).join("");
+  $("instDlg").showModal();
+}
+(function instInit(){
+  const installed = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  let framed = false; try{ framed = window.top !== window; }catch(e){ framed = true; }
+  if (installed || framed || !$("instDlg").showModal) return;
+  $("instBtn").hidden = false;
+  $("instBtn").addEventListener("click", instOpen);
+  addEventListener("beforeinstallprompt", e => { e.preventDefault(); INST.evt = e; });
+  $("instNow").addEventListener("click", async () => {
+    if (!INST.evt) return;
+    INST.evt.prompt(); const r = await INST.evt.userChoice.catch(() => null); INST.evt = null;
+    if (r && r.outcome === "accepted") $("instDlg").close();
+  });
+  addEventListener("appinstalled", () => { $("instBtn").hidden = true; if ($("instDlg").open) $("instDlg").close(); });
+})();
 })();
 </script>
 </body>
