@@ -256,6 +256,16 @@ audio{width:100%}
 .stats{display:flex;gap:28px;flex-wrap:wrap}
 .stat b{display:block;font-family:var(--f-display);font-weight:400;font-size:34px;line-height:1.1}
 .stat span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.streak{display:flex;gap:18px;align-items:center;padding:14px 20px}
+.streak-n{text-align:center;min-width:64px}
+.streak-n b{display:block;font-family:var(--f-display);font-weight:400;font-size:40px;line-height:1;color:var(--accent)}
+.streak-n span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.streak.cold .streak-n b{color:var(--muted)}
+.streak-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.streak-days{display:grid;grid-template-columns:repeat(14,1fr);gap:4px;max-width:340px}
+.streak-days i{aspect-ratio:1;border-radius:50%;background:var(--sunk);border:1px solid var(--line)}
+.streak-days i.on{background:var(--accent);border-color:var(--accent)}
+.streak-days i.today{outline:2px solid var(--ink);outline-offset:1px}
 .week{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;align-items:end;height:120px}
 .week .col{display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end}
 .week .bar{width:100%;max-width:34px;background:var(--accent);border-radius:4px 4px 0 0;min-height:2px}
@@ -400,6 +410,13 @@ details>summary:hover{color:var(--ink)}
     <div>
       <h2 id="planTitle">Today's practice</h2>
       <p class="lede">A plan built from your practice log, your pieces and what the ear drills show you find hard. Work down the list; each step opens the tool it needs.</p>
+    </div>
+    <div class="panel streak" id="streak" aria-live="polite">
+      <div class="streak-n"><b class="mono" id="stkN">0</b><span id="stkUnit">day streak</span></div>
+      <div class="streak-body">
+        <div id="stkMsg">Practise today to start a streak.</div>
+        <div class="streak-days" id="stkDays" aria-hidden="true"></div>
+      </div>
     </div>
     <div class="panel stack">
       <div class="row" style="justify-content:space-between">
@@ -874,6 +891,7 @@ details>summary:hover{color:var(--ink)}
       <div class="stats">
         <div class="stat"><b class="mono" id="sWeek">0</b><span>minutes, last 7 days</span></div>
         <div class="stat"><b class="mono" id="sStreak">0</b><span>day streak</span></div>
+        <div class="stat"><b class="mono" id="sBest">0</b><span>best streak</span></div>
         <div class="stat"><b class="mono" id="sTotal">0</b><span>sessions logged</span></div>
       </div>
       <div class="week" id="week"></div>
@@ -1788,6 +1806,31 @@ $("timerReset").addEventListener("click", () => { tStart = 0; tAcc = 0; clearInt
 $("timerUse").addEventListener("click", () => { $("lMin").value = Math.max(1, Math.round(tNow() / 60000)); $("lMin").focus(); });
 tShow(); if (tAcc) $("timerBtn").textContent = "Resume";
 
+// Days with any logged practice, on any device (the log is merged through Drive), plus today's automatic
+// time that hasn't been written to the log yet.
+function streakInfo(){
+  const set = new Set(entries.filter(e => (+e.minutes || 0) > 0).map(e => e.date));
+  const ad = autoDay();
+  if (ad.date === today() && Object.values(ad.secs).reduce((a, b) => a + b, 0) >= 60) set.add(ad.date);
+  const prev = k => { const d = new Date(k + "T12:00:00"); d.setDate(d.getDate() - 1); return dayKey(d); };
+  const done = set.has(today());
+  let cur = 0, k = done ? today() : prev(today()); // today not practised yet doesn't break the streak
+  while (set.has(k)){ cur++; k = prev(k); }
+  let best = 0, run = 0, last = "";
+  for (const k of [...set].sort()){ run = last && prev(k) === last ? run + 1 : 1; best = Math.max(best, run); last = k; }
+  return { cur, best, done, set };
+}
+function renderStreak(){
+  const { cur, best, done, set } = streakInfo();
+  $("sStreak").textContent = cur; $("sBest").textContent = best;
+  $("stkN").textContent = cur; 
+  $("streak").classList.toggle("cold", !done);
+  $("stkMsg").textContent = done ? (cur >= best && cur > 1 ? `Practised today. That's your best streak yet.` : `Practised today. ${best > cur ? `Your best is ${best} days.` : "Come back tomorrow to keep it going."}`)
+    : cur ? `Practise today to make it ${cur + 1} days.` : best ? `Practise today to start a new streak. Your best is ${best} days.` : "Practise today to start a streak.";
+  const days = [], d = new Date();
+  for (let i = 13; i >= 0; i--){ const x = new Date(d); x.setDate(d.getDate() - i); days.push(dayKey(x)); }
+  $("stkDays").innerHTML = days.map(k => `<i class="${set.has(k) ? "on" : ""}${k === today() ? " today" : ""}" title="${k}"></i>`).join("");
+}
 function renderLog(){
   const sorted = [...entries].sort((a, b) => (b.date + (b.createdAt || "")).localeCompare(a.date + (a.createdAt || "")));
   // last 7 days
@@ -1798,10 +1841,7 @@ function renderLog(){
   $("week").innerHTML = days.map((d, i) => `<div class="col"><span class="m">${mins[i] || ""}</span><div class="bar${mins[i] ? "" : " zero"}" style="height:${mins[i] ? Math.max(4, mins[i] / max * 80) : 2}px"></div><span class="d">${"SMTWTFS"[d.getDay()]}</span></div>`).join("");
   $("sWeek").textContent = mins.reduce((a, b) => a + b, 0);
   $("sTotal").textContent = entries.length;
-  const set = new Set(entries.map(e => e.date)); let streak = 0; const d = new Date();
-  if (!set.has(dayKey(d))) d.setDate(d.getDate() - 1); // today not logged yet doesn't break the streak
-  while (set.has(dayKey(d))){ streak++; d.setDate(d.getDate() - 1); }
-  $("sStreak").textContent = streak;
+  renderStreak();
   if (!sorted.length){
     $("entries").innerHTML = `<div class="empty">No sessions yet. Time today's practice with the timer, then save it with the form above.</div>`;
     return;
@@ -3618,6 +3658,7 @@ async function autoWrite(day){
   return true;
 }
 function autoShow(day){
+  renderStreak();
   const total = Object.values(day.secs).reduce((a, b) => a + b, 0);
   $("autoToday").textContent = total < 60 ? "Time spent with the metronome, drone, tuner, scales, ear training or sheet music is added to the log automatically." :
     `Logged automatically today: ${Math.round(total / 60)} min (${Object.entries(day.secs).sort((a, b) => b[1] - a[1]).map(([k, v]) => k + " " + Math.max(1, Math.round(v / 60))).join(", ")}).`;
