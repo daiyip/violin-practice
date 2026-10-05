@@ -6,11 +6,13 @@ A personal practice companion for learning the violin, in a single web page. It 
 
 ## Tools
 
+The **Install app** button at the top shows how to add the app to the iPhone or iPad home screen, the Mac Dock (Safari) or as a Chrome or Edge app, picked for the device and browser in use. It is hidden once the app runs installed, or after "Don't show again" in that browser. `manifest.webmanifest` gives the installed app its name, icon and full-screen display.
+
 The app has five tabs: **Today**, **Sheet music**, **Tools** (Tuner, Metronome, Drone), **Train** (Scales, Ear training, Fingerboard, Listen back with the posture check, Mirror) and **Log**.
 
 | Tool | What it does |
 | --- | --- |
-| **Today** | Builds a timed practice plan (15–60 min) from your log, your pieces and your ear-training results. Each step opens the tool it needs. |
+| **Today** | Shows your practice streak (consecutive days with practice on any device, counting today's automatic time), your best streak and the last 14 days. Builds a timed practice plan (15–60 min) from your log, your pieces and your ear-training results. Each step opens the tool it needs. |
 | **Tuner** | Reference tones for G, D, A and E, plus a live cents meter from the microphone. |
 | **Metronome** | Tap each beat to make it accented, normal or silent; 1–7 beats, subdivisions, tap tempo, silent bars for checking your pulse, and a speed trainer (steady climb or two up, one back) from a start tempo to a goal. |
 | **Drone** | A sustained tonic (with optional fifth) in any key, for intonation practice. |
@@ -21,7 +23,7 @@ The app has five tabs: **Today**, **Sheet music**, **Tools** (Tuner, Metronome, 
 | **Listen back** | Record, or open a recording: pitch trace and per-note intonation (cents sharp/flat), slow-down playback with A–B loop, and a rhythm check (tempo you played, rushing/dragging, evenness). |
 | **Mirror** (under Train) | The front camera as a mirror, flipped like a real one, with optional guide lines and full screen, to check stance, violin hold and bow arm while you play. Nothing is recorded. |
 | **Posture** (under Listen back) | Open a video of yourself playing (or use the camera): checks shoulder, head tilt, left wrist, bow path and bow elbow using on-device pose tracking. |
-| **Practice log** | Practice time is logged automatically: while the metronome, drone, tuner, scale trainer, ear training or sheet music player is in use (and the app was touched in the last 10 minutes), the minutes are added to one entry per day and device, with what you worked on. Also a session timer, log with focus tags and notes, weekly chart, streak, and a weekly summary. With Google Drive connected, the log, repertoire, scale runs and ear-training scores are backed up to `Practice log backup.json` in the app's Drive folder and merged across devices. |
+| **Practice log** | Practice time is logged automatically: while the metronome, drone, tuner, scale trainer, ear training or sheet music player is in use (and the app was touched in the last 10 minutes), the minutes are added to one entry per day and device, with what you worked on. Also a session timer, log with focus tags and notes, weekly chart, current and best streak, and a weekly summary. With Google Drive connected, the log, repertoire, scale runs and ear-training scores are backed up to `Practice log backup.json` in the app's Drive folder and merged across devices. |
 
 All audio analysis is plain signal processing (YIN pitch detection, onset detection). The posture tab uses Google's MediaPipe pose model, which runs entirely in the browser; no audio or video leaves your device.
 
@@ -60,6 +62,7 @@ While the consent screen is in Testing, only the listed test users can sign in. 
 - `index.html` contains the whole app: HTML, CSS and JavaScript.
 - `pose/` holds MediaPipe Tasks Vision 0.10.14 (Apache 2.0) and the `pose_landmarker_lite` model, stored base64-encoded as `.b64.txt`.
 - `abcjs/` holds abcjs 6.7.1 (MIT), which draws and plays the sheet-music tab's notation.
+- `manifest.webmanifest` describes the installed app (name, icons, standalone display).
 - `icons/` holds the logo: `logo.svg` (browser tab and page header; a transparent violin that turns white in dark mode) and PNGs for the iPhone home screen (`icon-180.png`, a white violin on black so it stays visible in dark mode) and other sizes.
 - `anthropic/sdk.min.mjs` is the Anthropic TypeScript SDK 0.131.0 (MIT) built as a single browser ES module for the sheet-music tab. To rebuild it for a newer version:
 
