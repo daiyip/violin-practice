@@ -2933,7 +2933,11 @@ async function pushPiece(p, folder, remote){
   if (!remote) meta.parents = [folder];
   const json = await gUpload(meta, new Blob([JSON.stringify(data, null, 1)], { type: "application/json" }), remote && remote.id);
   p.drive = Object.assign(p.drive, { json, syncedAt: p.updatedAt });
-  await LIB.put(p);
+  // Renamed, edited or deleted here while it uploaded: keep that change, note what Drive now holds, and sync again.
+  const cur = await LIB.get(p.id);
+  if (cur && cur.updatedAt === p.updatedAt) return LIB.put(p);
+  await LIB.put(Object.assign(cur || Object.assign({}, p, { deleted: true, updatedAt: Date.now() }), { drive: p.drive }));
+  G.again = true;
 }
 async function pullPiece(remote, local){
   const d = await gFetch(G.api + "files/" + remote.id + "?alt=media").then(r => r.json());
@@ -2941,6 +2945,12 @@ async function pullPiece(remote, local){
   const photos = same ? local.photos : [];
   if (!same) for (const id of d.photoIds || []){
     try { photos.push(await blobToDataUrl(await gFetch(G.api + "files/" + id + "?alt=media").then(r => r.blob()))); } catch (e) { if (e.signin) throw e; }
+  }
+  // Changed or deleted here while it downloaded: this device's version wins, and the next sync sends it.
+  const cur = await LIB.get(d.id);
+  if (local ? !cur || cur.updatedAt !== local.updatedAt : cur){
+    if (!cur) await LIB.put({ id: d.id, title: d.title, deleted: true, updatedAt: Date.now(), drive: { json: remote.id, photos: d.photoIds || [], syncedAt: d.updatedAt } });
+    G.again = true; return;
   }
   await LIB.put({ id: d.id, title: d.title, abc: d.abc, bpm: d.bpm, folder: d.folder || "", photos, updatedAt: d.updatedAt,
     drive: { json: remote.id, photos: d.photoIds || [], syncedAt: d.updatedAt } });
@@ -3024,8 +3034,9 @@ function applyProgress(d){
 }
 async function syncProgress(folder, file){
   if (logMode !== "local" || !LOCAL_COLS.length) return;
-  const mine = localProgress();
   const theirs = file ? await gFetch(G.api + "files/" + file.id + "?alt=media").then(r => r.json()) : null;
+  // Read this device's side after the download, so anything logged while it came down is merged in, not overwritten.
+  const mine = localProgress();
   const merged = theirs ? mergeProgress(mine, theirs) : mine, out = JSON.stringify(merged);
   if (out !== JSON.stringify(mine)) applyProgress(merged);
   if (!theirs || out !== JSON.stringify(theirs)){
@@ -3067,7 +3078,11 @@ async function syncDrive(){
       }
       if (!r){
         // Gone from Drive: deleted on another device, unless it changed here since the last sync.
-        if (p.drive && p.drive.json && p.updatedAt <= p.drive.syncedAt){ await LIB.del(p.id); if (SH.pieceId === p.id) SH.pieceId = null; }
+        if (p.drive && p.drive.json && p.updatedAt <= p.drive.syncedAt){
+          const cur = await LIB.get(p.id);
+          if (cur && cur.updatedAt !== p.updatedAt){ G.again = true; continue; }
+          await LIB.del(p.id); if (SH.pieceId === p.id) SH.pieceId = null;
+        }
         else { if (p.drive) p.drive = null; await pushPiece(p, folder, null); }
         continue;
       }
@@ -3280,7 +3295,11 @@ async function syncTakes(folder){
     t.driveId = await gUploadBig({ name: `${stamp}${t.bpm ? " " + t.bpm + "bpm" : ""}.${tkExt(t.mime)}`, parents: [dir], mimeType: t.mime,
       appProperties: { vprKind: "take", vprTake: t.id, vprPiece: t.pieceId, date: t.date, bpm: String(t.bpm || ""), dur: String(Math.round(t.dur || 0)), exp: String(t.exp || 0) } },
       t.blob, f => { TK.pct[t.id] = f; renderTakes(); });
-    delete TK.pct[t.id]; delete t.blob; await TAKES.put(t);
+    delete TK.pct[t.id];
+    // Deleted here while it uploaded: take it out of Drive again. Otherwise keep any change made meanwhile.
+    const cur = await TAKES.get(t.id);
+    if (!cur || cur.deleted){ await gTrash(t.driveId); await TAKES.del(t.id); continue; }
+    cur.driveId = t.driveId; cur.expDirty = (cur.exp || 0) !== (t.exp || 0); delete cur.blob; await TAKES.put(cur);
   }
   // Takes recorded on other devices appear here (to be played from Drive); ones deleted elsewhere go.
   let remote = [], page = "";
